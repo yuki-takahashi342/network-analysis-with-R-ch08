@@ -1,0 +1,5 @@
+"0","edge_value <- class182_networkdata$friend_tie"
+"0","edgelist_friendship <- class182_networkdata[edge_value > 0,"
+"0","                                             c(""ego"", ""alter"", ""friend_tie"")]"
+"0",""
+"0","head(edgelist_friendship)"

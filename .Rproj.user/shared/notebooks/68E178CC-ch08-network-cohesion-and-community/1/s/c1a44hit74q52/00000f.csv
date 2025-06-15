@@ -1,0 +1,1 @@
+"0","email_network <- as.undirected(email_network, mode = ""collapse"")"

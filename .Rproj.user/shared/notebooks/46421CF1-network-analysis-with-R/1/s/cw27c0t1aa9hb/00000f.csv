@@ -1,0 +1,5 @@
+"0","cug_triads_advice <- cug.test(krack_advice, "
+"0","                              FUN = count_triads_function, "
+"0","                              mode = c(""digraph""), "
+"0","                              cmode = c(""dyad.census""), reps = 1000, "
+"0","                              FUN.args = list(triad_names = c(""030T""))) "

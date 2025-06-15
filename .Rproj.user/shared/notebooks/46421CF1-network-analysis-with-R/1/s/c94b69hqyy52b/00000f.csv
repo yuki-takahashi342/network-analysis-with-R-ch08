@@ -1,0 +1,6 @@
+"0","locs <- network.layout.fruchtermanreingold(extract_nets[[1]], layout.par = NULL)"
+"0",""
+"0","par(mfrow = c(1, 2))"
+"0",""
+"0","plot(extract_nets[[1]], main = ""Talk to Network, 0 to 20 Minutes"", "
+"0","     vertex.col = cols, vertex.cex = 2, coord = locs)"

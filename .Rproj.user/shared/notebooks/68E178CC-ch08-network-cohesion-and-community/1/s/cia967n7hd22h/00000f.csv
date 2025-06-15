@@ -1,0 +1,2 @@
+"0","modularity_data <- extract_modularity_data(communities = friend_comm_eb,"
+"0","                                           graph = net182_friend_und)"

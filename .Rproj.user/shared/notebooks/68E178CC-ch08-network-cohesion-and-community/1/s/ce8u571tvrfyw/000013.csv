@@ -1,0 +1,4 @@
+"0","#5 communities"
+"0","plot(net182_friend_und, layout = layout, vertex.color = mems_mult_level1,"
+"0","     edge.color = ""light gray"", vertex.size = 20,"
+"0","     main = ""Level 1 Community Membership"")"

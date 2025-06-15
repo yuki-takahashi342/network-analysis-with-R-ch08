@@ -1,0 +1,3 @@
+"0","ego_community <- mems_mult_level2[class182_dyads$ego]"
+"0","alter_community <- mems_mult_level2[class182_dyads$alter]"
+"0","same_comm <- ego_community == alter_community"

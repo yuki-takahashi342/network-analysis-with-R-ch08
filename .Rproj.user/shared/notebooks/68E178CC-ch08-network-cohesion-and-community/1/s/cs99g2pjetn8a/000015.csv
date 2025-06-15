@@ -1,0 +1,4 @@
+"0","friend_comm_spinglass <- cluster_spinglass(graph = net182_noisolates)"
+"0","plot(net182_friend_und, layout = layout, vertex.color = friend_comm_spinglass$membership,"
+"0","     edge.color = ""light gray"", vertex.size = 20,"
+"0","     main = ""スピングラス法でのコミュニティ分割"")"

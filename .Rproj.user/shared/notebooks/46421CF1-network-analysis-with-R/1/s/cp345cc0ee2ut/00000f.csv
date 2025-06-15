@@ -1,0 +1,2 @@
+"0","activity_data <- get.vertex.activity(net_dynamic_class, as.spellList = T)"
+"0","head(activity_data)"

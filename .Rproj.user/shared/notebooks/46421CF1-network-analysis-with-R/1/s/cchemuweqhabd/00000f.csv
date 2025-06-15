@@ -1,0 +1,8 @@
+"0","count_triads_function <- function(dat, triad_names){"
+"0","  # Arguments:"
+"0","  # dat: the network object"
+"0","  # triad_names: the name of the triad type"
+"0","  "
+"0","  triads <- triad.census(dat) # calculating the triad census"
+"0","  triads[1, triad_names] # grabbing counts of triad of interest"
+"0","}"

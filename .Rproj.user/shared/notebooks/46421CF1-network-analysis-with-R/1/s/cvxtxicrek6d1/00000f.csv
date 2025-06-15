@@ -1,0 +1,4 @@
+"0","CUG_test_table <- CUGtest_alltriads(dat = krack_friendship, "
+"0","                                    mode = ""digraph"", "
+"0","                                    cmode = ""dyad.census"", reps = 1000)"
+"0","CUG_test_table"

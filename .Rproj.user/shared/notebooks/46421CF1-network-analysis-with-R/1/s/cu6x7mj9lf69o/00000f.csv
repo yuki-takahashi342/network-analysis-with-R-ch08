@@ -1,0 +1,4 @@
+"0","class_edgelist_byadjacency <- reshape(data = class_adjacency, "
+"0","                                      varying = nomination_columns, "
+"0","                                      v.names = ""receiver"", idvar = ""id"","
+"0","                                      direction = ""long"")  "

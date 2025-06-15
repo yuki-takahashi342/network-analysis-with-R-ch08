@@ -1,0 +1,4 @@
+"0","url3 <- ""https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/krackhardt_friendship.csv"""
+"0",""
+"0","friends_data_frame <- read.csv(file = url3)"
+"0","head(friends_data_frame)"

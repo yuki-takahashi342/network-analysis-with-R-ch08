@@ -1,0 +1,3 @@
+"0","friends_edgelist <- friends_data_frame[friends_data_frame$friendship_tie == 1, ]"
+"0","krack_friendship <-  network(x = friends_edgelist, directed = T, "
+"0","                             vertices = attributes)"

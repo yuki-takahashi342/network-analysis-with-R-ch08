@@ -1,0 +1,4 @@
+"0","library(car)"
+"0",""
+"0","cols <- recode(class182_attributes$race, "
+"0","               as.factor = F, ""'black' = 'blue'; NA = NA; else = 'white'"")"

@@ -1,0 +1,3 @@
+"0",""
+"0","plot(extract_nets[[2]], main = ""Talk to Network, 20 to 40 Minutes"", "
+"0","     vertex.col = cols_example2, vertex.cex = 2)"

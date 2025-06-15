@@ -1,0 +1,5 @@
+"0","showtext_auto()"
+"0","friend_comm_fandg <- cluster_fast_greedy(graph = net182_friend_und)"
+"0","plot(net182_friend_und, layout = layout, vertex.color = friend_comm_fandg$membership,"
+"0","     edge.color = ""light gray"", vertex.size = 20,"
+"0","     main = ""高速貪欲法でのコミュニティ分割"")"

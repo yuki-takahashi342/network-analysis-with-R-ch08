@@ -1,0 +1,3 @@
+"0","sem1_edgelist_nolabel <- edgelist_relabel_function(edgelist = sem1_edgelist, "
+"0","                                                   ids = sem1_attributes$ids)"
+"0","head(sem1_edgelist_nolabel)"

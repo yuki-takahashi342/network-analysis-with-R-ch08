@@ -1,0 +1,4 @@
+"0","url2 <- ""https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/krackhardt_attributes.csv"""
+"0",""
+"0","attributes <- read.csv(file = url2)"
+"0","attributes"

@@ -1,0 +1,597 @@
+---
+title: "最終レポート"
+author: "高橋祐貴"
+format:
+  html:
+    toc: true
+    self-contained: true
+    scrollable: true
+    page-layout: full
+crossref:
+  fig-title: Figure     # (default is "Figure")
+  tbl-title: Table     # (default is "Table")
+  title-delim: ":"     # (default is ":")
+execute:
+  cache: false
+  warning: false
+  message: false
+  echo: true
+date: "`r Sys.Date()`"
+bibliography: references.bib
+editor: source
+editor_options: 
+  chunk_output_type: inline
+---
+
+# データ
+
+## データの読み込み
+
+パッケージとデータを読み込む
+
+```{r}
+pacman::p_load(tidyverse, 
+               haven,
+               janitor, 
+               ggExtra, 
+               estimatr, 
+               modelsummary, 
+               broom,
+               splines,
+               ggeffects,
+               knitr,
+               vcd,
+               mice,
+               miceadds,
+               Amelia,
+               gtsummary,
+               DescTools,
+               summarytools,
+               marginaleffects,
+               poLCA,
+               FactoMineR,
+               showtext,
+               gt)
+showtext_auto(TRUE)
+```
+
+```{r}
+PY110 <- read_dta("../data/PY110/PY110.dta")
+PM110 <- read_dta("../data/PM110/PM110.dta")
+JLPS <- bind_rows(PY110,PM110,.id = "YM")
+```
+
+必要な変数を選択する。
+
+```{r}
+JLPS_a <- JLPS %>%
+  mutate(
+    w4_flag = cqsurvey,
+    age = 2009 - ybirth, # 2009年末時点での年齢
+    age2 = age^2,
+    gender = case_when(sex == 1 ~ 0,
+                            sex == 2 ~ 1),
+    gender = factor(
+      gender,
+      levels = 0:1,
+      labels = c("Men", "Women")
+    ),
+    edu = case_when(
+      ZQ23A == 1 ~ 1L,
+      ZQ23A == 2 ~ 2L,
+      ZQ23A == 3 ~ 3L,
+      ZQ23A %in% c(4, 5, 6) ~ 4L,
+      TRUE ~ NA_integer_
+    ),
+    edu_ct = factor(
+      edu,
+      levels = 1:4,
+      labels = c("JH", "HS", "PTC", "JC and Univ")
+    ),
+    job = cq03_2c,
+    job_type = CQ03_1,
+    job_post = CQ03_3,
+    firmsize = CQ03_7,
+    cul_classic = car::recode(CQ16A, "1:3=1; 4=0; else=NA"),
+    cul_rock = car::recode(CQ16B, "1:3=1; 4=0; else=NA"),
+    cul_museum = car::recode(CQ16C, "1:3=1; 4=0; else=NA"),
+    cul_karaoke = car::recode(CQ16D, "1:3=1; 4=0; else=NA"),
+    cul_pachinko = car::recode(CQ16E, "1:3=1; 4=0; else=NA"),
+    cul_sports = car::recode(CQ16F, "1:3=1; 4=0; else=NA"),
+    cul_library = car::recode(CQ16G, "1:3=1; 4=0; else=NA"),
+    cul_books = car::recode(CQ16H, "1:3=1; 4=0; else=NA"),
+    cul_tabloids = car::recode(CQ16I, "1:3=1; 4=0; else=NA"),
+    hincome = case_when(CQ37C== 1 ~ 5, 
+                            CQ37C == 2 ~ 25,
+                            CQ37C == 3 ~ 50,
+                            CQ37C == 4 ~ 100,
+                            CQ37C == 5 ~ 200,
+                            CQ37C == 6 ~ 300,
+                            CQ37C == 7 ~ 400,
+                            CQ37C == 8 ~ 500,
+                            CQ37C == 9 ~ 700,
+                            CQ37C == 10 ~ 1000,
+                            CQ37C == 11 ~ 1500,
+                            CQ37C == 12 ~ 2000,
+                            CQ37C == 13 ~ 2250, 
+                            TRUE ~ NA_real_),
+    hincome_ct = car::recode(CQ37C, "1:6=1; 7:8=2; 9=3; 10:13=4; else=NA"),
+    hincome_ct = factor(hincome_ct,
+                         levels = 1:4,
+                         labels = c("0-350", "350-600", "600-850", "850-"))
+  ) %>% 
+  dplyr::select(w4_flag:hincome_ct)
+
+JLPS_a
+```
+
+欠損パターンの確認
+```{r}
+JLPS_a %>% is.na() %>% colSums()
+flux(JLPS_a)
+md.pattern(JLPS_a, rotate.names = TRUE)
+JLPS_a$w4_flag %>% tabyl
+```
+
+2010年W4の時点で脱落している1614ケースは分析から除く
+```{r}
+JLPS_b <- JLPS_a %>% 
+  filter(w4_flag == 4)
+JLPS_b$w4_flag %>% tabyl
+
+md.pattern(JLPS_b, rotate.names = TRUE)
+```
+
+# 文化活動の類型
+## 単純集計
+文化活動の変数について、やる人、やらない人の割合は以下の通り
+```{r}
+JLPS_b %>% select(starts_with("cul_")) %>% 
+  map(tabyl)
+```
+
+
+## 文化活動を潜在クラス分析
+
+文化活動変数をfactorに変換
+```{r}
+JLPS_b <- JLPS_b |> 
+  mutate(cul_classic = factor(cul_classic,
+                              levels = 0:1,
+                              labels = c("No", "Yes")),
+         cul_rock = factor(cul_rock,
+                              levels = 0:1,
+                              labels = c("No", "Yes")),
+         cul_museum = factor(cul_museum,
+                              levels = 0:1,
+                              labels = c("No", "Yes")),
+         cul_karaoke = factor(cul_karaoke,
+                              levels = 0:1,
+                              labels = c("No", "Yes")),
+         cul_pachinko = factor(cul_pachinko,
+                              levels = 0:1,
+                              labels = c("No", "Yes")),
+         cul_sports = factor(cul_sports,
+                              levels = 0:1,
+                              labels = c("No", "Yes")),
+         cul_library = factor(cul_library,
+                              levels = 0:1,
+                              labels = c("No", "Yes")),
+         cul_books = factor(cul_books,
+                              levels = 0:1,
+                              labels = c("No", "Yes")),
+         cul_tabloids = factor(cul_tabloids,
+                              levels = 0:1,
+                              labels = c("No", "Yes"))
+         )
+```
+
+
+共変量を入れないモデルで推定する。
+```{r}
+JLPS_c <- JLPS_b |> drop_na(starts_with("cul_"))
+md.pattern(JLPS_c, rotate.names = TRUE)
+fm1 <- cbind(cul_classic, cul_rock, cul_museum, cul_karaoke, cul_pachinko, cul_sports, cul_library, cul_books, cul_tabloids)~1 # 式formulaの作成
+res1 <- poLCA(formula=fm1,data=JLPS_c,nclass=3,nrep=10, graphs = TRUE) # 潜在クラス分析の実行
+res2 <- poLCA(formula=fm1,data=JLPS_c,nclass=4,nrep=10, na.rm = FALSE, graphs = TRUE)
+
+## 共変量なしの潜在クラスモデルを、クラス数を変えて分析
+set.seed(01012)
+lc1<-poLCA(fm1, data=JLPS_c, nclass=1, na.rm = FALSE, nrep=30, maxiter=3000) 
+lc2<-poLCA(fm1, data=JLPS_c, nclass=2, na.rm = FALSE, nrep=30, maxiter=3000)
+lc3<-poLCA(fm1, data=JLPS_c, nclass=3, na.rm = FALSE, nrep=30, maxiter=3000)
+lc4<-poLCA(fm1, data=JLPS_c, nclass=4, na.rm = FALSE, nrep=30, maxiter=3000) 
+lc5<-poLCA(fm1, data=JLPS_c, nclass=5, na.rm = FALSE, nrep=30, maxiter=3000)
+lc6<-poLCA(fm1, data=JLPS_c, nclass=6, na.rm = FALSE, nrep=30, maxiter=3000)
+
+# generate dataframe with fit-values
+
+results <- data.frame(Modell=c("Modell 1"),
+                      L2=lc1$Gsq,
+                      df = lc1$resid.df,
+                      pvalue = 1-pchisq(lc1$Gsq, lc1$resid.df),
+                      AIC = lc1$aic,
+                      BIC=lc1$bic
+                      )
+results$Modell<-as.integer(results$Modell)
+results[1,1]<-c("Modell 1")
+results[2,1]<-c("Modell 2")
+results[3,1]<-c("Modell 3")
+results[4,1]<-c("Modell 4")
+results[5,1]<-c("Modell 5")
+results[6,1]<-c("Modell 6")
+
+results[2,2]<-lc2$Gsq
+results[3,2]<-lc3$Gsq
+results[4,2]<-lc4$Gsq
+results[5,2]<-lc5$Gsq
+results[6,2]<-lc6$Gsq
+
+results[2,3]<-lc2$resid.df
+results[3,3]<-lc3$resid.df
+results[4,3]<-lc4$resid.df
+results[5,3]<-lc5$resid.df
+results[6,3]<-lc6$resid.df
+
+results[2,4]<-1-pchisq(lc2$Gsq, lc2$resid.df)
+results[3,4]<-1-pchisq(lc3$Gsq, lc3$resid.df)
+results[4,4]<-1-pchisq(lc4$Gsq, lc4$resid.df)
+results[5,4]<-1-pchisq(lc5$Gsq, lc5$resid.df)
+results[6,4]<-1-pchisq(lc6$Gsq, lc6$resid.df)
+
+results[2,5]<-lc2$aic
+results[3,5]<-lc3$aic
+results[4,5]<-lc4$aic
+results[5,5]<-lc5$aic
+results[6,5]<-lc6$aic
+
+results[2,6]<-lc2$bic
+results[3,6]<-lc3$bic
+results[4,6]<-lc4$bic
+results[5,6]<-lc5$bic
+results[6,6]<-lc6$bic
+
+results
+
+difference <- data.frame(Modell = c("1 Class VS 2 Class"),
+                         L2 = lc1$Gsq - lc2$Gsq,
+                         df = lc1$resid.df - lc2$resid.df,
+                         pvalue = 1-pchisq(lc1$Gsq - lc2$Gsq, lc1$resid.df - lc2$resid.df))
+difference$Modell<-as.integer(difference$Modell)
+difference[1,1]<-c("1 Class VS 2 Class")
+difference[2,1]<-c("2 Class VS 3 Class")
+difference[3,1]<-c("3 Class VS 4 Class")
+difference[4,1]<-c("4 Class VS 5 Class")
+difference[5,1]<-c("5 Class VS 6 Class")
+
+difference[2,2]<-lc2$Gsq - lc3$Gsq
+difference[3,2]<-lc3$Gsq - lc4$Gsq
+difference[4,2]<-lc4$Gsq - lc5$Gsq
+difference[5,2]<-lc5$Gsq - lc6$Gsq
+
+difference[2,3]<-lc2$resid.df - lc3$resid.df
+difference[3,3]<-lc3$resid.df - lc4$resid.df
+difference[4,3]<-lc4$resid.df - lc5$resid.df
+difference[5,3]<-lc5$resid.df - lc6$resid.df
+
+difference[2,4]<-1-pchisq(lc2$Gsq - lc3$Gsq, lc2$resid.df - lc3$resid.df)
+difference[3,4]<-1-pchisq(lc3$Gsq - lc4$Gsq, lc3$resid.df - lc4$resid.df)
+difference[4,4]<-1-pchisq(lc4$Gsq - lc5$Gsq, lc4$resid.df - lc5$resid.df)
+difference[5,4]<-1-pchisq(lc5$Gsq - lc6$Gsq, lc5$resid.df - lc6$resid.df)
+
+difference
+
+results <- bind_rows(results, difference)
+```
+
+表を整形する
+```{r}
+lca_results <- gt(results)
+lca_results
+lca_results <- 
+  lca_results |> 
+  cols_label(
+    Modell = "モデル",
+    L2 = "L^2",
+    pvalue = "p-value"
+  ) %>%
+  tab_header(
+    title = "クラス数とモデル適合度",
+  ) |> 
+  fmt_number(columns = c("L2", "pvalue"),
+             decimals = 2) |> 
+  sub_missing(missing_text = "---")
+
+# Show the gt Table
+lca_results
+
+lca_results <- lca_results %>% 
+  tab_row_group(
+    label = "モデル適合度",
+    rows = 1:6
+  ) %>%
+  tab_row_group(
+    label = "モデル対比",
+    rows = 7:11
+  ) |> 
+  row_group_order(groups = c("モデル適合度", "モデル対比"))
+
+lca_results
+```
+
+クラス構成割合と条件付き正応答確率の表を作る。
+```{r}
+class_proportion_all <- data.frame(c(lc1$P, lc2$P, lc3$P, lc4$P, lc5$P, lc6$P)) |> t()
+rownames(class_proportion_all) <- c("クラス構成割合")
+
+class_proportion <- data.frame(lapply(lc1$probs, "[[", 2)) |> t()
+class_proportion <- cbind(
+  class_proportion, 
+  data.frame(lapply(lc2$probs, "[[", 3)) |> t(), 
+  data.frame(lapply(lc2$probs, "[[", 4)) |> t(),
+  data.frame(lapply(lc3$probs, "[[", 4)) |> t(),
+  data.frame(lapply(lc3$probs, "[[", 5)) |> t(),
+  data.frame(lapply(lc3$probs, "[[", 6)) |> t(),
+  data.frame(lapply(lc4$probs, "[[", 5)) |> t(),
+  data.frame(lapply(lc4$probs, "[[", 6)) |> t(),
+  data.frame(lapply(lc4$probs, "[[", 7)) |> t(),
+  data.frame(lapply(lc4$probs, "[[", 8)) |> t(),
+  data.frame(lapply(lc5$probs, "[[", 6)) |> t(),
+  data.frame(lapply(lc5$probs, "[[", 7)) |> t(),
+  data.frame(lapply(lc5$probs, "[[", 8)) |> t(),
+  data.frame(lapply(lc5$probs, "[[", 9)) |> t(),
+  data.frame(lapply(lc5$probs, "[[", 10)) |> t(),
+  data.frame(lapply(lc6$probs, "[[", 7)) |> t(),
+  data.frame(lapply(lc6$probs, "[[", 8)) |> t(),
+  data.frame(lapply(lc6$probs, "[[", 9)) |> t(),
+  data.frame(lapply(lc6$probs, "[[", 10)) |> t(),
+  data.frame(lapply(lc6$probs, "[[", 11)) |> t(),
+  data.frame(lapply(lc6$probs, "[[", 12)) |> t())
+class_proportion <- rbind(class_proportion_all, class_proportion)
+colnames(class_proportion) <- c("クラス1.1", "クラス2.1", "クラス2.2","クラス3.1", "クラス3.2", "クラス3.3", "クラス4.1", "クラス4.2", "クラス4.3", "クラス4.4", "クラス5.1", "クラス5.2", "クラス5.3", "クラス5.4", "クラス5.5","クラス6.1", "クラス6.2", "クラス6.3", "クラス6.4", "クラス6.5", "クラス6.6")
+class_proportion <- class_proportion |> as.data.frame()
+
+lca_proportion <- gt(class_proportion, rownames_to_stub = TRUE)
+lca_proportion <- lca_proportion |> 
+  tab_header(
+    title = "クラス構成割合と条件付き応答確率",
+  ) |> 
+  fmt_number(columns = c(クラス1.1:クラス6.6),
+             decimals = 2) |> 
+  tab_row_group(
+    label = "指標の条件付き正応答確率",
+    rows = 2:10
+  ) |> 
+  tab_row_group(
+    label = "クラス構成割合",
+    rows = 1
+  ) |> 
+  row_group_order(groups = c("クラス構成割合", "指標の条件付き正応答確率"))
+
+lca_proportion <- lca_proportion |> 
+  tab_spanner(
+    label = "１クラス",
+    columns = c(クラス1.1)
+  )  |>
+  tab_spanner(
+    label = "２クラス",
+    columns = c(クラス2.1:クラス2.2)
+  )  |> 
+  tab_spanner(
+    label = "３クラス",
+    columns = c(クラス3.1:クラス3.3)
+  ) |> 
+  tab_spanner(
+    label = "４クラス",
+    columns = c(クラス4.1:クラス4.4)
+  ) |> 
+  tab_spanner(
+    label = "５クラス",
+    columns = c(クラス5.1:クラス5.5)
+  ) |> 
+  tab_spanner(
+    label = "６クラス",
+    columns = c(クラス6.1:クラス6.6)
+  )
+```
+
+解釈可能性から、４クラスモデルを採用する。
+```{r}
+lc4$predclass
+JLPS_d <- cbind(JLPS_c, lc4$predclass)
+colnames(JLPS_d)[22] <- c("predclass")
+
+JLPS_d$predclass |> tabyl()
+
+md.pattern(JLPS_d, rotate.names = TRUE)
+```
+
+JSSIを紐づける
+```{r}
+ssi <- read.csv("https://raw.githubusercontent.com/ShoFujihara/OccupationalScales/master/SSM_sei_ssi_v1.0.csv") %>% 
+  dplyr::select(ssm,ssi)
+head(ssi)
+
+JLPS_d <- JLPS_d |> 
+  mutate(# ssm小分類管理職修正
+    r_ssm = case_when(!job <= 553 & 
+                      job_post %in% 4:6 & 
+                      firmsize %in% 9 ~ 545,  # 管理的公務員
+                      !job <= 553 & 
+                      job_post %in% 4:5 & 
+                      firmsize %in% 7:8 ~ 550,  # 会社・団体等の管理職員
+                      !job <= 553 & 
+                      (job_post == 6 | job_type %in% c(1,6)) & 
+                      firmsize %in% 5:9 ~ 548,  # 会社役員
+                    TRUE ~ job))
+
+# 修正の確認
+JLPS_d %>% filter(job != r_ssm) %>%
+  dplyr::select(job, r_ssm, job_type, job_post, firmsize) %>%
+  unique()
+
+# ssi変数のマッチ
+JLPS_d <- JLPS_d %>% 
+  dplyr::left_join(ssi, by = c("r_ssm" = "ssm"))
+JLPS_d %>% dplyr::select(r_ssm,ssi)
+
+md.pattern(JLPS_d, rotate.names = TRUE)
+
+```
+
+
+EGP分類に振り分ける
+```{r}
+JLPS_d <- JLPS_d |> 
+  mutate(
+    EGP = car::recode(r_ssm,
+                      "501:504=10;
+                      505:506=20;
+                      507:510=10;
+                      511:516=20;
+                      517:519=10;
+                      520:523=20;
+                      524=10;
+                      525:535=10;
+                      536=10;
+                      537:544=20;
+                      545:553=10;
+                      554:565=31;
+                      566:577=32;
+                      578=71;
+                      579=60;
+                      580=71;
+                      581=60;
+                      582:583=71;
+                      584=32;
+                      585=71;
+                      586=31;
+                      587=32;
+                      588=71;
+                      589=32;
+                      590=31;
+                      591=32;
+                      592=71;
+                      593:598=31;
+                      599:605=72;
+                      606=60;
+                      607=71;
+                      608:609=20;
+                      610=10;
+                      611=31;
+                      612:614=71;
+                      615=20;
+                      616:619=31;
+                      620:622=71;
+                      623=60;
+                      624:627=71;
+                      628=60;
+                      629:630=71;
+                      631=60;
+                      632=71;
+                      633=60;
+                      634=71;
+                      635:642=60;
+                      643=71;
+                      644=60;
+                      645:646=71;
+                      647=60;
+                      648:650=71;
+                      651=60;
+                      652:653=71;
+                      654:656=60;
+                      657=71;
+                      658=60;
+                      659=71;
+                      660:666=60;
+                      667=71;
+                      668=60;
+                      669=71;
+                      670:671=60;
+                      672=71;
+                      673:675=60;
+                      676=71;
+                      677:681=60;
+                      682:683=71;
+                      684=50;
+                      685:688=71;
+                      689:691=99;
+                      701=32;
+                      702=60;
+                      703=20;
+                      704=71;
+                      705=99;
+                      706=71;
+                      986:998=98;
+                      999=99;"),
+    r_EGP = case_when(job_type %in% c(1,6) &
+                    firmsize >= 5 &
+                    firmsize <= 10 ~ 10,
+                    job_type %in% c(1,6) &
+                    firmsize >= 2 &
+                    firmsize <= 4 &
+                    ((EGP >= 31 & EGP <= 71)|r_ssm == 707) ~ 41,
+                    job_type %in% c(1,6) &
+                    firmsize == 1 &
+                    ((EGP >= 31 & EGP <= 71)|r_ssm == 707) ~ 42,
+                    r_ssm >= 548 &
+                    r_ssm <= 553 &
+                    job_type >= 2 &
+                    job_type <= 5 &
+                    firmsize >=2 &
+                    firmsize <=4 ~ 20,
+                    EGP >= 31 &
+                    EGP <= 71 &
+                    job_post >=4 &
+                    job_post <= 6 &
+                    firmsize >= 5 & firmsize <= 10 &
+                    job_type >=2 &
+                    job_type <=5 ~ 10,
+                    EGP >= 31 & EGP <= 71 &
+                    job_post >=4 & job_post <=6 &
+                    firmsize >=2 & firmsize <=4 &
+                    job_type >=2 & job_type <=5 ~ 20,
+                    EGP >=31 & EGP <=32 & job_post >=2 & job_post <=3 ~ 20,
+                    EGP >= 60 & EGP <= 71 & job_post >= 2 & job_post <=3 ~ 50,
+                    r_ssm >= 596 & r_ssm <= 597 & firmsize !=10 ~ 71,
+                    TRUE ~ EGP
+                    ),
+    a_EGP = car::recode(r_EGP,
+                        "10=1;20=2;31:32=3;41:42=4;50:60=5;71=6;72=7;98:804=NA"),
+    a_EGP = factor(a_EGP,
+                   levels = 1:7,
+                   labels = c("I 上層専門管理", "II 下層専門管理", "IIIab 単純ノンマニュアル", "IVab 自営業主", "V+VI 熟練マニュアル", "VIIa 非熟練", "Vc+VIIb 農業"))
+  )
+
+JLPS_d |> tabyl(r_EGP, a_EGP)
+JLPS_d |> tabyl(r_ssm, a_EGP)
+JLPS_d |> tabyl(a_EGP)
+md.pattern(JLPS_d, rotate.names = TRUE)
+```
+
+q02a = job_type
+q02c = firmsize
+q02d = r_ssm
+q02e = job_post
+
+
+多項ロジスティック分析を行う。
+ひとまずリストワイズ処理でケースが揃っているもので分析してみる。
+```{r}
+d_multinom <- JLPS_d %>% 
+  dplyr::select(gender, age, age2, edu_ct, hincome_ct, a_EGP, ssi, predclass) %>%
+  mutate(predclass = factor(predclass)) |> 
+  drop_na()
+fit_multinom_multinom <- d_multinom %>%
+  mutate_if(is.numeric, scale) %>%
+  nnet::multinom(predclass ~ 
+                   gender + age + age2 + edu_ct + hincome_ct + a_EGP + ssi, 
+                 data = .)
+summary(fit_multinom_multinom, Wald = TRUE)
+
+tidy(fit_multinom_multinom) %>% 
+  mutate(exp = exp(estimate)) |> 
+  print(n=Inf)
+```
+
+

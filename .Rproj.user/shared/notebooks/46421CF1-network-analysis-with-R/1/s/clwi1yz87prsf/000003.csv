@@ -1,0 +1,2 @@
+"0","plot(net_listwise_delete, vertex.label = NA, vertex.size = 10, "
+"0","     edge.arrow.size = .5, edge.arrow.width = .5)"

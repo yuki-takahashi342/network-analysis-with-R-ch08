@@ -1,0 +1,6 @@
+"0","oddsratio_function(egoalter_tab = sextab, "
+"0","                   attribute = ego_dat$SEX[ego_dat$NUMGIVEN > 0]) "
+"1","[1]"
+"1"," 1.571536"
+"1","
+"

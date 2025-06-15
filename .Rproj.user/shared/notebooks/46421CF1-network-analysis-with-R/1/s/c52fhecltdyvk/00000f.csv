@@ -1,0 +1,26 @@
+"0","library(networkDynamic)"
+"2","
+‘networkDynamic’ 0.11.5 (2024-11-21), part of the Statnet Project
+* ‘news(package=""networkDynamic"")’ for changes since last version
+* ‘citation(""networkDynamic"")’ for citation information
+* ‘https://statnet.org’ for help, support, and other information
+
+"
+"0","net_dynamic_interactions <- networkDynamic(vertex.spells = vertex_spells, "
+"0","                                           edge.spells = edge_spells)"
+"1","Initializing base.net of size 18 imputed from maximum vertex id in edge records
+"
+"1","Created net.obs.period to describe network
+"
+"1"," Network observation period info:
+"
+"1","  Number of observation spells: 1 
+"
+"1","  Maximal time range observed: 0 until 43 
+"
+"1","  Temporal mode: continuous 
+"
+"1","  Time unit: unknown 
+"
+"1","  Suggested time increment: NA 
+"

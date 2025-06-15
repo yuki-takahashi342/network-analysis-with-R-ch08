@@ -1,0 +1,6 @@
+"0","indeg <- degree(net_listwise_delete, mode = ""in"")"
+"0","sd(indeg)"
+"1","[1]"
+"1"," 1.609203"
+"1","
+"

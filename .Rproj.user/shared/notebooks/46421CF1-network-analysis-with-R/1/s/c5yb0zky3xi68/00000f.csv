@@ -1,0 +1,4 @@
+"0","url1 <- ""https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/krackhardt_advice.csv"""
+"0",""
+"0","advice_data_frame <- read.csv(file = url1) "
+"0","head(advice_data_frame)"

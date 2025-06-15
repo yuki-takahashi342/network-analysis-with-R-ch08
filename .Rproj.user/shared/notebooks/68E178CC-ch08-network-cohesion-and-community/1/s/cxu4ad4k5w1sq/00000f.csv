@@ -1,0 +1,1 @@
+"0","mems_ids <- which(summary_data$num_communities == 4)"

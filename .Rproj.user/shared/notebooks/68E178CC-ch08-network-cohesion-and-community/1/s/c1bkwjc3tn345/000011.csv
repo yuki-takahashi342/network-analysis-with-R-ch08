@@ -1,0 +1,4 @@
+"0","friend_comm_prop <- cluster_label_prop(graph = net182_friend_und)"
+"0","plot(net182_friend_und, layout = layout, vertex.color = friend_comm_prop$membership,"
+"0","     edge.color = ""light gray"", vertex.size = 20,"
+"0","     main = ""ラベル伝播法でのコミュニティ分割"")"

@@ -1,0 +1,2634 @@
+---
+title: "Network Analysis with R"
+author: "Yuki Takahashi"
+format: html
+editor: visual
+---
+
+## 3. Network Data
+
+### 3.1 Reading Data into R
+
+データの読み込み
+
+```{r}
+url1 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/class555_matrix.csv"
+
+class_mat <- read.csv(file = url1)
+```
+
+データ型の確認
+
+```{r}
+class(class_mat)
+```
+
+行列計算をするためには、マトリックス型に変換しなければいけない。
+
+```{r}
+class_mat <- as.matrix(class_mat)
+```
+
+行名、列名をつける
+
+```{r}
+rownames(class_mat) <- 1:nrow(class_mat)
+colnames(class_mat) <- 1:ncol(class_mat)
+```
+
+```{r}
+class_mat
+```
+
+ノードの属性情報の読み込み
+
+```{r}
+url2 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/class555_attributedata.csv"
+
+class_attributes <- read.csv(file = url2, stringsAsFactors = T)
+```
+
+```{r}
+class_attributes
+```
+
+```{r}
+class_attributes$gender[1:5]
+```
+
+```{r}
+class_attributes[1:5, "gender"] 
+```
+
+```{r}
+class(class_attributes[, "grade"])
+```
+
+```{r}
+class_attributes[, "grade"] * 2
+```
+
+```{r}
+class(class_attributes[, "gender"])
+```
+
+女性が1、男性が2の水準にある
+
+```{r}
+levels(class_attributes[, "gender"])
+```
+
+### 3.2 Networks in igraph
+
+```{r}
+library(igraph)
+```
+
+```{r}
+class_netbymatrix <- graph_from_adjacency_matrix(adjmatrix = class_mat, 
+                                                 mode = "directed")
+```
+
+```{r}
+class_netbymatrix
+```
+
+ノード情報を追加する
+
+```{r}
+class_netbymatrix <- set_vertex_attr(graph = class_netbymatrix, 
+                                     name = "gender", 
+                                     value = class_attributes$gender)
+```
+
+```{r}
+class_netbymatrix <- set_vertex_attr(graph = class_netbymatrix, 
+                                     name = "grade",
+                                     value = class_attributes$grade)
+
+class_netbymatrix <- set_vertex_attr(graph = class_netbymatrix, 
+                                     name = "race",
+                                     value = class_attributes$race)
+```
+
+```{r}
+class_netbymatrix
+```
+
+可視化のためにエッジリストを使う
+
+```{r}
+url3 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/class555_edgelist.csv"
+
+class_edges <- read.csv(file = url3)
+```
+
+```{r}
+head(class_edges) 
+```
+
+```{r}
+class_netbyedgelist <- graph_from_data_frame(d = class_edges, directed = T)
+```
+
+```{r}
+class_netbyedgelist
+```
+
+verticesに属性データのデータフレームを指定すると、自動ですべての属性を付与してくれる。
+
+```{r}
+class_netbyedgelist <- graph_from_data_frame(d = class_edges, directed = T,
+                                             vertices = class_attributes)
+```
+
+```{r}
+class_netbyedgelist
+```
+
+```{r}
+V(class_netbyedgelist)$name
+```
+
+```{r}
+net <- graph_from_data_frame(d = class_edges, directed = T, 
+                             vertices = (id = 1:26))
+plot(net)
+```
+
+igraphオブジェクトから情報を取得する
+
+grade属性の一覧を取得する。
+
+```{r}
+vertex_attr(graph = class_netbyedgelist, name = "grade")
+```
+
+ネットワークをエッジリストに変換する。
+
+```{r}
+class_edges_temp <- as_edgelist(graph = class_netbyedgelist, names = F)
+```
+
+```{r}
+head(class_edges_temp) 
+```
+
+隣接行列も取得可能。
+
+```{r}
+as_adjacency_matrix(graph = class_netbyedgelist) 
+```
+
+隣接リストを用いてネットワークを構築する
+
+```{r}
+url4 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/class555_adjacency_list.csv"
+
+class_adjacency <- read.csv(file = url4)
+```
+
+```{r}
+class_adjacency
+```
+
+reshapeパッケージで隣接リストをエッジリストに変換できる。
+
+```{r}
+install.packages('reshape')
+library(reshape)
+```
+
+列名を生成する。
+
+```{r}
+nomination_columns <- paste("Nomination", 1:5, sep = "") 
+```
+
+```{r}
+nomination_columns
+```
+
+ワイド型からロング型へデータ形式を変換する。
+
+```{r}
+class_edgelist_byadjacency <- reshape(data = class_adjacency, 
+                                      varying = nomination_columns, 
+                                      v.names = "receiver", idvar = "id",
+                                      direction = "long")  
+```
+
+```{r}
+head(class_edgelist_byadjacency)
+```
+
+time列は不要なので削除する。
+
+```{r}
+class_edgelist_byadjacency <- class_edgelist_byadjacency[, -2]
+colnames(class_edgelist_byadjacency) <- c("sender", "receiver")
+```
+
+NAがある行も不要なので削除する。
+
+```{r}
+which_keep <- complete.cases(class_edgelist_byadjacency)
+class_edgelist_byadjacency <- class_edgelist_byadjacency[which_keep, ]
+```
+
+行の順番を入れ替える。
+
+```{r}
+what_order <- order(class_edgelist_byadjacency$sender)
+class_edgelist_byadjacency <- class_edgelist_byadjacency[what_order, ]
+head(class_edgelist_byadjacency)
+```
+
+### 3.3 Using the network Package
+
+igraphの代わりにnetworkパッケージを使う。
+
+```{r}
+detach(package:igraph)
+library(network)
+```
+
+隣接行列からネットワーク構築。
+
+```{r}
+class_netbymatrix_example2 <- network(x = class_mat, directed = T) 
+```
+
+カテゴリカル変数をファクターから文字型に変換。
+
+```{r}
+class_attributes$race <- as.character(class_attributes$race)
+class_attributes$gender <- as.character(class_attributes$gender)
+```
+
+データフレームをリストに変換
+
+```{r}
+attribute_list <- do.call(list, class_attributes)
+attribute_list
+```
+
+属性を付与したネットワークを構築。
+
+```{r}
+class_netbymatrix_example2 <- network(x = class_mat, directed = T, 
+                                      vertex.attr = attribute_list) 
+class_netbymatrix_example2
+```
+
+以下の関数でも属性を付与できる。
+
+```{r}
+set.vertex.attribute(x = class_netbymatrix_example2, attrname = "gradenew",
+                     value = class_attributes$grade)
+```
+
+```{r}
+class_netbymatrix_example2
+```
+
+エッジリストからネットワーク構築
+
+```{r}
+class_netbyedgelist_example2 <- network(x = class_edges, directed = T, 
+                                        vertices = class_attributes) 
+```
+
+```{r}
+class_netbyedgelist_example2
+```
+
+隣接行列の取得もできる。
+
+```{r}
+as.matrix(class_netbyedgelist_example2)
+```
+
+ノードの属性情報を取得する。
+
+```{r}
+get.vertex.attribute(x = class_netbyedgelist_example2, attrname = "grade")
+```
+
+ノードの順番を取得
+
+```{r}
+get.vertex.attribute(x = class_netbyedgelist_example2, 
+                     attrname = "vertex.names")
+```
+
+エッジ属性を追加する
+
+重みをエッジに追加する。
+
+```{r}
+set.edge.attribute(x = class_netbyedgelist_example2, 
+                   attrname = "weight", value = class_edges[, "weight"])
+```
+
+```{r}
+class_netbyedgelist_example2
+```
+
+igraphオブジェクトとnetworkオブジェクトを変換する
+
+```{r}
+install.packages('intergraph')
+library(intergraph)
+```
+
+igraphオブジェクトをnetworkオブジェクトに変換する。
+
+```{r}
+network_from_igraph <- asNetwork(class_netbyedgelist)
+```
+
+```{r}
+network_from_igraph
+```
+
+### 3.4 Some Key Network Measures
+
+出次数を行数を合計することで計算する。
+
+```{r}
+outdeg <- rowSums(class_mat) 
+outdeg 
+```
+
+入次数を列数を合計して計算する。
+
+```{r}
+indeg <- colSums(class_mat)
+indeg
+```
+
+同じことをigraphの関数で行う
+
+```{r}
+detach(package:network)
+library(igraph)
+```
+
+```{r}
+outdeg_igraph <- degree(graph = class_netbyedgelist, mode = "out")
+indeg_igraph <- degree(graph = class_netbyedgelist, mode = "in")
+```
+
+一致するか確認
+
+```{r}
+table(outdeg == outdeg_igraph) 
+```
+
+密度を手動で計算
+
+```{r}
+num_edges <- gsize(class_netbyedgelist)
+num_edges
+```
+
+```{r}
+num_nodes <- gorder(class_netbyedgelist)
+num_nodes
+```
+
+```{r}
+number_dyads <- (num_nodes * (num_nodes - 1))
+den <- num_edges / number_dyads
+den
+```
+
+igraphの関数で密度を計算する。
+
+```{r}
+edge_density(class_netbyedgelist)
+```
+
+距離を計算
+
+距離2のwalkがいくつあるかは、行列の積で計算できる。
+
+```{r}
+walks2 <- class_mat %*% class_mat
+walks2 
+```
+
+```{r}
+class_mat[c(1, 7), ] 
+```
+
+同様に、距離3のwalkは下記で計算できる
+
+```{r}
+walks3 <- class_mat %*% class_mat %*% class_mat
+walks3
+```
+
+パス長を計算する
+
+```{r}
+dist_mat <- distances(graph = class_netbyedgelist, mode = "out")
+dist_mat[1:10, 1:10] 
+```
+
+すべての最短経路を計算する関数
+
+```{r}
+all_shortest_paths(class_netbyedgelist, from = 1, to = 6) 
+```
+
+```{r}
+all_shortest_paths(class_netbyedgelist, from = 1, to = 16) 
+```
+
+すべてのノード間のパス長を計算する。
+
+まずは対角成分を欠損にする。
+
+```{r}
+diag(dist_mat) <-  NA
+```
+
+```{r}
+mean(dist_mat, na.rm = T)
+```
+
+Infになる組を除く
+
+```{r}
+mean(dist_mat[dist_mat != Inf], na.rm = T) 
+```
+
+近接指標を計算する。距離行列の逆数を使う。
+
+```{r}
+close_mat <- 1 / dist_mat
+close_mat[1:10, 1:10]
+```
+
+値が大きいほど近いノードの組みということになる（0から1を取る）
+
+```{r}
+mean(close_mat, na.rm = T) 
+```
+
+```{r}
+median(dist_mat, na.rm = T)
+```
+
+```{r}
+median(close_mat, na.rm = T)
+```
+
+到達可能性
+
+```{r}
+reach_mat <- ifelse(dist_mat < Inf, yes = 1, no = 0) 
+reach_mat
+```
+
+最長経路長（diameter）を計算する。
+
+```{r}
+max(dist_mat, na.rm = T)
+```
+
+```{r}
+max(dist_mat[dist_mat != Inf], na.rm = T)
+```
+
+```{r}
+diameter(class_netbyedgelist)
+```
+
+### 3.5 Discrete Longitudinal Networks
+
+離散時系列データと連続時系列データがある。
+
+ライブラリー読み込み
+
+```{r}
+# install.packages('networkDynamic')
+# install.packages('statnet')
+library(network)
+library(sna)
+library(networkDynamic)
+library(tsna)
+```
+
+```{r}
+url1 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/class237_sem1_edgelist.txt"
+
+sem1_edgelist <- read.table(file = url1, header = T, colClasses = "character")
+```
+
+```{r}
+head(sem1_edgelist)
+```
+
+属性情報も読み込む。
+
+```{r}
+url2 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/class237_sem1_attributes.txt"
+
+sem1_attributes <- read.table(file = url2,  header = T)
+```
+
+```{r}
+sem1_attributes[, c("ids", "sem_id", "expected_grade", "like_subject")]
+```
+
+```{r}
+sem1_attributes <- sem1_attributes[order(sem1_attributes$ids), ]
+```
+
+```{r}
+sem1_attributes$ids <- as.character(sem1_attributes$ids)
+```
+
+第一学期のネットワークを構築
+
+```{r}
+sem1_net <- network(x = sem1_edgelist, directed = T, vertices = sem1_attributes)
+```
+
+エッジリストのidのラベルを削除し数値にする関数
+
+```{r}
+edgelist_relabel_function <- function(edgelist, ids){
+  
+  edgelist_simple <- data.frame(sender = as.numeric(factor(edgelist[, 1], 
+                                                             levels = ids)), 
+                                receiver = as.numeric(factor(edgelist[, 2], 
+                                                             levels = ids))) 
+  return(edgelist_simple)  
+}
+```
+
+```{r}
+sem1_edgelist_nolabel <- edgelist_relabel_function(edgelist = sem1_edgelist, 
+                                                   ids = sem1_attributes$ids)
+head(sem1_edgelist_nolabel)
+```
+
+第二学期のネットワークも構築する。
+
+```{r}
+url3 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/class237_sem2_edgelist.txt"
+
+sem2_edgelist <- read.table(file = url3, header = T, colClasses = "character")
+
+url4 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/class237_sem2_attributes.txt"
+
+sem2_attributes <- read.table(file = url4, header = T)
+
+sem2_attributes <- sem2_attributes[order(sem2_attributes$ids), ]
+
+sem2_attributes$ids <- as.character(sem2_attributes$ids)
+
+sem2_net <- network(x = sem2_edgelist, directed = T, vertices = sem2_attributes)
+```
+
+動的ネットワークオブジェクトを作成する。
+
+```{r}
+net_list <- list(sem1_net, sem2_net)
+```
+
+```{r}
+net_dynamic_class <- networkDynamic(network.list = net_list, 
+                                    vertex.pid = "vertex.names",
+                                    create.TEAs = T)
+net_dynamic_class
+```
+
+データフレーム化してみてみる
+
+```{r}
+net_dat_class <- as.data.frame(net_dynamic_class)
+head(net_dat_class)
+```
+
+ノード名を抽出
+
+```{r}
+get.vertex.pid(net_dynamic_class)[1:5]
+```
+
+ネットワークの活動データを抽出？
+
+```{r}
+activity_data <- get.vertex.activity(net_dynamic_class, as.spellList = T)
+head(activity_data)
+```
+
+両方の学期にいないノードを抽出
+
+```{r}
+activity_data[activity_data$duration < 2, ]
+```
+
+#### 要約統計
+
+密度を計算してみる
+
+```{r}
+tSnaStats(nd = net_dynamic_class, snafun = "gden")
+```
+
+分けても出せる
+
+```{r}
+gden(sem1_net)
+```
+
+```{r}
+gden(sem2_net)
+```
+
+入次数中心性の変化を可視化する
+
+```{r}
+ids_sem1 <- get.vertex.attribute(sem1_net, "vertex.names")
+indegree_sem1 <- degree(sem1_net, cmode = "indegree")
+indegree_dat1 <- data.frame(ids = ids_sem1, indegree_sem1 = indegree_sem1)
+head(indegree_dat1)
+```
+
+```{r}
+ids_sem2 <- get.vertex.attribute(sem2_net, "vertex.names")
+indegree_sem2 <- degree(sem2_net, cmode = "indegree")
+indegree_dat2 <- data.frame(ids = ids_sem2, indegree_sem2 = indegree_sem2)
+indegree_dat <- merge(indegree_dat1, indegree_dat2, by = "ids", all = T)
+indegree_dat
+```
+
+### 3.6 Continuous-Time Networks
+
+#### データの準備
+
+```{r}
+url5 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/example_edge_spells.csv"
+
+edge_spells <- read.csv(file = url5)
+head(edge_spells)
+```
+
+エッジスペルデータとノードスペルデータの二つのデータフレームがある。
+
+エッジは複数回登場しうる。11番が2番に話しかけたデータは以下。
+
+```{r}
+edge_spells[edge_spells$send_col == 11 & edge_spells$receive_col == 2, ]
+```
+
+頂点スペルデータを読み込む
+
+```{r}
+url6 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/example_vertex_spells.csv"
+
+vertex_spells <- read.csv(file = url6)
+head(vertex_spells)
+```
+
+最初の列はノードがいつネットワークに参入したか、2つ目の列はいつ退出したかを示す。
+
+#### 動的ネットワークデータを作成
+
+```{r}
+net_dynamic_interactions <- networkDynamic(vertex.spells = vertex_spells, 
+                                           edge.spells = edge_spells)
+```
+
+```{r}
+net_dynamic_interactions
+```
+
+デフォルト設定だと、すべての時間に関するネットワークを可視化する。
+
+```{r}
+plot(net_dynamic_interactions)
+```
+
+#### 要約統計
+
+10分おきの入次数中心性を計算する
+
+```{r}
+tSnaStats(nd = net_dynamic_interactions, snafun = "degree",
+          time.interval = 10, aggregate.dur = 10, cmode = "indegree")
+```
+
+時間で区切った折りたたみネットワークでも同じことが計算できる
+
+```{r}
+net_0_10 <- network.collapse(dnet = net_dynamic_interactions, 
+                             onset = 0, length = 10)
+```
+
+```{r}
+degree(net_0_10, cmode = "indegree")
+```
+
+密度を10分おきに計算
+
+```{r}
+tSnaStats(nd = net_dynamic_interactions, snafun = "gden", 
+          time.interval = 10, aggregate.dur = 10)
+```
+
+5分おきに細分化する
+
+```{r}
+tSnaStats(nd = net_dynamic_interactions, snafun = "degree", 
+          time.interval = 5, aggregate.dur = 1, cmode = "indegree")
+```
+
+```{r}
+tSnaStats(nd = net_dynamic_interactions, snafun = "gden", 
+          time.interval = 5, aggregate.dur = 1)
+```
+
+## 4. Missing Network Data
+
+### 4.1 Missing Data
+
+```{r}
+url1 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/sorority_attributes_wmissingdata.csv"
+
+sorority_attributes <- read.csv(file = url1)
+```
+
+```{r}
+url2 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/sorority_matrix_wmissingdata.csv"
+
+sorority_matrix <- read.csv(file = url2, row.names = 1)
+```
+
+```{r}
+sorority_matrix <- as.matrix(sorority_matrix)
+```
+
+欠損している観測値を確認
+
+```{r}
+missing <- which(sorority_attributes[, "missing"] == 1)
+missing
+```
+
+```{r}
+notmissing <- which(sorority_attributes[, "missing"] == 0)
+```
+
+欠損している行を確認
+
+```{r}
+sorority_matrix[2, 1:15]
+```
+
+全部NAになっている。
+
+列方向に確認
+
+```{r}
+sorority_matrix[1:15, 2]
+```
+
+NAになっているのは、欠損している観測値に相当。1になっているのは、欠損している観測値（この場合は2）と交友関係を申告しているノードを示す（この場合は13のみ）
+
+```{r}
+sorority_matrix[2, 7]
+```
+
+両方とも欠測している観測値の組みは当然NAになっている。
+
+### 4.2 Listwise Deletion
+
+欠損している列と行をすべて削除するやり方。
+
+58行58列にまで減る。
+
+```{r}
+matrix_remove_missing <- sorority_matrix[-missing, -missing]
+dim(matrix_remove_missing)
+```
+
+```{r}
+library(igraph)
+net_listwise_delete  <- graph_from_adjacency_matrix(matrix_remove_missing, 
+                                                    mode = "directed")
+```
+
+```{r}
+plot(net_listwise_delete, vertex.label = NA, vertex.size = 10, 
+     edge.arrow.size = .5, edge.arrow.width = .5)
+```
+
+近接性を上記のネットワーク全体について計算する。
+
+対角成分（＝自分自身への距離）は意味がないのでNAにする。
+
+```{r}
+dist_listwise_delete <- distances(graph = net_listwise_delete, mode = "out")
+
+diag(dist_listwise_delete) <-  NA 
+```
+
+平均の近接性を計算
+
+```{r}
+mean_closeness_listwise_delete <- mean(1 / dist_listwise_delete, na.rm = T) 
+mean_closeness_listwise_delete
+```
+
+上記を関数化する。
+
+```{r}
+closeness_function <- function(network){
+  
+  dist_matrix <-  distances(graph = network, mode = "out")
+  diag(dist_matrix) <- NA
+  mean_closeness <- mean(1 / dist_matrix, na.rm = T)
+  return(mean_closeness)
+}
+```
+
+関数を用いて同じ平均近接性を計算
+
+```{r}
+closeness_function(net_listwise_delete)
+```
+
+### 4.3 Gauging the Level of Bias
+
+どれだけのバイアスが指標（この場合近接性）に生じているかを評価する。
+
+#### 4.3.2 Gauging Bias Using Predictive Models
+
+ノードの数、欠損値の割合、入次数の標準偏差、有向か無向かを入れることでバイアスを推定できるモデルがある。入次数の標準偏差を計算する。（なんか使えないんですけど）
+
+```{r}
+indeg <- degree(net_listwise_delete, mode = "in")
+sd(indeg)
+```
+
+### 4.4 Simple Imputation Options
+
+非対称、対象、確率的代入法の三つがある。
+
+まず、元の行列に戻り、どの欠損値に対し別の人がネットワークを張るかを特定する。
+
+```{r}
+nominations_missing_nodes <- sorority_matrix[, missing]
+```
+
+これを列方向に足し合わせることでそれぞれの欠損値が受け取っている指名の数がわかる。
+
+```{r}
+indeg_missing <- colSums(nominations_missing_nodes, na.rm = T)
+```
+
+これが0より大きい行を選ぶと、指名を受けているノードがわかる。
+
+```{r}
+impute_nodes <- missing[indeg_missing > 0]
+impute_nodes
+```
+
+これで1つも指名を受けていないノードは除外する。
+
+```{r}
+still_missing <- missing[indeg_missing == 0]
+still_missing
+```
+
+### 4.4.1 Simple Imputation with Asymmetric Option
+
+すべての欠損値が受けている指名は反対方向には存在しない（非対称）と考える代入法。
+
+まず行列をコピーする。
+
+```{r}
+matrix_impute_asym <- sorority_matrix 
+```
+
+続いて、欠損値から出ているエッジを0本で代入する。
+
+```{r}
+matrix_impute_asym[missing, ] <- 0 
+```
+
+これに基づいてネットワークを作成する。
+
+```{r}
+net_impute_asym <- graph_from_adjacency_matrix(matrix_impute_asym, 
+                                               mode = "directed")
+```
+
+ノードを欠損してるかどうかで色分けして描画する。
+
+```{r}
+cols <- ifelse(sorority_attributes[, "missing"] == 1, "red", "blue")
+table(cols, sorority_attributes[, "missing"])
+```
+
+```{r}
+V(net_impute_asym)$color <- cols 
+```
+
+指名を受け取っていない欠損値は削除する。
+
+```{r}
+net_impute_asym <- delete_vertices(graph = net_impute_asym, v = still_missing)
+```
+
+```{r}
+plot(net_impute_asym, vertex.label = NA, vertex.size = 7, 
+     edge.arrow.size = .5, edge.arrow.width = .5)
+```
+
+この場合の近接性を計算する。
+
+```{r}
+mean_closeness_impute_asym <- closeness_function(net_impute_asym)
+mean_closeness_impute_asym
+```
+
+リストワイズ法に比べ、近接性が下がっていることがわかる。
+
+#### 4.4.2 Simple Imputation with Symmetric Option
+
+すべての欠損値に入る指名が双方向である（対称性）と想定する。
+
+コピーする。
+
+```{r}
+matrix_impute_sym <- sorority_matrix
+```
+
+```{r}
+head(nominations_missing_nodes)
+```
+
+この行列を転置することで、欠損値から出ている指名を代入することができる。
+
+NAどうしの関係は0で代入する（正しいとは限らない）。
+
+```{r}
+nominations_missing_nodes[is.na(nominations_missing_nodes)] <- 0
+outgoing_ties_sym <- t(nominations_missing_nodes) 
+```
+
+欠損を代入する。
+
+```{r}
+matrix_impute_sym[missing, ] <- outgoing_ties_sym
+```
+
+確認する。
+
+```{r}
+matrix_impute_sym[1:15, 2]
+```
+
+```{r}
+matrix_impute_sym[2, 13]
+```
+
+非対称代入法のときはこのつながりはないことになっていることを確認。
+
+```{r}
+matrix_impute_asym[2, 13]
+```
+
+ネットワークを作成する。
+
+```{r}
+net_impute_sym <- graph_from_adjacency_matrix(matrix_impute_sym, 
+                                              mode = "directed")
+```
+
+```{r}
+net_impute_sym <- delete_vertices(graph = net_impute_sym, v = still_missing)
+```
+
+```{r}
+net_impute_sym
+```
+
+近接性を計算。
+
+```{r}
+mean_closeness_impute_sym <- closeness_function(net_impute_sym)
+mean_closeness_impute_sym
+```
+
+この場合は高めに出る。
+
+#### 4.4.3 Simple Imputation with Probabilistic Option
+
+欠損値を除いて作ったネットワークから、つながりが双方向である確率を計算して、その確率を用いて欠損値から出ている指名を代入する。
+
+igraphのreciprocity関数を用いて双方向である確率を計算する。
+
+```{r}
+p <- reciprocity(graph = net_listwise_delete, mode = "ratio")
+p
+```
+
+この確率を用いて代入する。
+
+まず行列をコピー。
+
+```{r}
+matrix_impute_prob <- sorority_matrix
+```
+
+入次行列を転置する。
+
+```{r}
+outgoing_ties_prob <- t(nominations_missing_nodes)
+```
+
+ここで1になっている（非欠損値から欠損値に指名がいっている）ところについて、逆方向の指名があるかを確率的に生成する。ここでは二項分布を用いる。
+
+再現性を産むため、シードを設定する。
+
+```{r}
+set.seed(200)
+
+impute_tie <- outgoing_ties_prob == 1
+
+outgoing_ties_prob[impute_tie] <- rbinom(outgoing_ties_prob[impute_tie], 
+                                          size = 1, prob = p) 
+```
+
+```{r}
+matrix_impute_prob[missing, ] <- outgoing_ties_prob
+```
+
+ネットワークを作成し、近接性を計算。
+
+```{r}
+net_impute_prob <- graph_from_adjacency_matrix(matrix_impute_prob, 
+                                               mode = "directed")
+
+net_impute_prob <- delete_vertices(graph = net_impute_prob, v = still_missing)
+
+mean_closeness_impute_prob <- closeness_function(net_impute_prob)
+```
+
+```{r}
+mean_closeness_impute_prob
+```
+
+#### 4.4.4 Comparing Estimates
+
+3通りの代入法による結果を比較する。
+
+```{r}
+closeness_table <- data.frame(true = .15, 
+                              listwise_delete = mean_closeness_listwise_delete,
+                              asym = mean_closeness_impute_asym, 
+                              sym = mean_closeness_impute_sym, 
+                              prob = mean_closeness_impute_prob)
+```
+
+```{r}
+closeness_table
+```
+
+この場合は対称的代入法が一番真値に近い。
+
+より良い代入法ももちろんあるよ。
+
+## 5. Network Visualization
+
+### 5.1 Setting up the Session
+
+```{r}
+url1 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/class555_edgelist.csv"
+
+class_edges <- read.csv(file = url1)
+```
+
+```{r}
+url2 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/class555_attributedata.csv"
+
+class_attributes <- read.csv(file = url2)
+```
+
+```{r}
+library(igraph)
+```
+
+```{r}
+class_net <- graph_from_data_frame(d = class_edges, directed = T, 
+                                   vertices = class_attributes)
+class_net
+```
+
+### 5.2 Network Plots using igraph
+
+```{r}
+plot(class_net) 
+```
+
+ジェンダーごとにノードを色分けする。
+
+```{r}
+cols <- ifelse(class_attributes$gender == "Female", "lightskyblue", "navy") 
+```
+
+```{r}
+table(cols, class_attributes$gender)
+```
+
+```{r}
+V(class_net)$color <- cols 
+plot(class_net)
+```
+
+ノードの大きさを入次中心性で変えて、人気の人物を分かりやすくする。
+
+```{r}
+indeg <- degree(class_net, mode = "in")
+plot(class_net, vertex.size = indeg, margin = -.10)
+```
+
+ノードのサイズを全体的に大きくして、ラベルの色を赤にする。
+
+```{r}
+plot(class_net, vertex.size = indeg + 3, vertex.label.color = "red", 
+     margin = -.10)
+```
+
+ラベルとノードの輪郭を除いて見やすくする。
+
+```{r}
+plot(class_net, vertex.size = indeg + 3, vertex.label = NA, 
+     vertex.frame.color = NA, margin = -.10)
+```
+
+矢印のサイズと太さを下げて見やすく
+
+```{r}
+plot(class_net, vertex.size = indeg + 3, vertex.label = NA, 
+     vertex.frame.color = NA, edge.arrow.size = .5, edge.arrow.width = .75, 
+     margin = -.10)
+```
+
+エッジの色を薄くして見やすくする
+
+```{r}
+plot(class_net, vertex.size = indeg + 3, vertex.label = NA, 
+     vertex.frame.color = NA, edge.arrow.size = .5, edge.arrow.width = .75, 
+     edge.color = "light gray", margin = -.10)
+```
+
+配置のアルゴリズムをMDSに変えてみる
+
+```{r}
+plot(class_net, vertex.size = indeg + 3, vertex.label = NA, 
+     vertex.frame.color = NA, edge.arrow.size = .5, edge.arrow.width = .75, 
+     edge.color = "light gray", layout = layout_with_mds, margin = -.10)
+```
+
+鎌田-河合の方法にする
+
+```{r}
+plot(class_net, vertex.size = indeg + 3, vertex.label = NA, 
+     vertex.frame.color = NA, edge.arrow.size = .5, edge.arrow.width = .75, 
+     edge.color = "light gray", layout = layout_with_kk, margin = -.10)
+```
+
+### 5.3 Network Plots based on ggplot
+
+```{r}
+detach(package:igraph)
+library(network)
+library(intergraph)
+library(ggplot2)
+#install.packages('GGally')
+library(GGally)
+```
+
+networkオブジェクトとしてネットワークデータを作る
+
+```{r}
+class_net_sna <- asNetwork(class_net)
+```
+
+入次数中心性をノードの属性として追加
+
+```{r}
+set.vertex.attribute(class_net_sna, attrname = "indeg", value = indeg)
+```
+
+#### 5.3.1 GGally package
+
+```{r}
+ggnet2(class_net_sna)
+```
+
+ノードの大きさ、色、エッジの太さ、矢印を変える
+
+```{r}
+ggnet2(class_net_sna, node.size = indeg, node.color = cols, 
+       edge.size = .5, arrow.size = 3, arrow.gap = 0.02, 
+       edge.color = "grey80")
+```
+
+凡例を削除
+
+```{r}
+ggnet2(class_net_sna, node.size = indeg, node.color = cols, 
+       edge.size = .5, arrow.size = 3, arrow.gap = 0.02,
+       edge.color = "grey80") + 
+  guides(size = "none")
+```
+
+ノードの色をジェンダー変数で設定する（と自動で凡例が生成される）
+
+```{r}
+ggnet2(class_net_sna, node.size = indeg,  node.color = "gender", 
+       palette = c("Male" = "navy", "Female" = "lightskyblue"),
+       edge.size = .5, arrow.size = 3, arrow.gap = 0.02, 
+       edge.color = "grey80") + 
+  guides(size = "none")
+```
+
+エッジにもつながりの組み合わせ次第で色をつける
+
+```{r}
+ggnet2(class_net_sna,  node.size = indeg,  node.color = "gender",
+       palette = c("Male" = "navy", "Female" = "lightskyblue"),
+       edge.size = .5, arrow.size = 3, arrow.gap = 0.02, 
+       edge.color = c("color", "grey80")) + 
+  guides(size = "none")
+```
+
+#### 5.3.2 ggnetwork package
+
+ggnetworkはより細かい調整が利く
+
+```{r}
+pacman::p_load(ggnetwork)
+```
+
+```{r}
+ggplot(class_net_sna, aes(x = x, y = y, xend = xend, yend = yend)) + 
+  geom_edges(color = "lightgray") +
+  geom_nodes(color = cols, size = indeg + 3) +
+  theme_blank() 
+```
+
+矢印を追加
+
+```{r}
+ ggplot(class_net_sna, arrow.gap = .015, 
+        aes(x = x, y = y, xend = xend, yend = yend)) + 
+  geom_edges(color = "lightgray", 
+             arrow = arrow(length = unit(7.5, "pt"), type = "closed")) +
+  geom_nodes(color = cols, size = indeg + 3) +
+  theme_blank() 
+```
+
+### 5.4 Contour Plots
+
+ノードの密度に合わせて等高線を引く
+
+```{r}
+  ggplot(class_net_sna, arrow.gap = .01, 
+         aes(x = x, y = y, xend = xend, yend = yend)) + 
+  geom_edges(color = "lightgray", 
+             arrow = arrow(length = unit(5, "pt"), type = "closed")) +
+  geom_nodes(color = cols) +
+  theme_blank() + 
+  geom_density_2d()
+```
+
+### 5.5 Interactive Plots
+
+```{r}
+pacman::p_load(networkD3)
+```
+
+networkD3ライブラリは、インデックスを0から受け取るので、エッジリストのインデックスを調整する。
+
+```{r}
+class_edges_zeroindex <- class_edges[, c("sender", "receiver")] - 1
+```
+
+```{r}
+class_attributes_zeroindex <- data.frame(id = class_attributes$id - 1, 
+                                         indeg = indeg, 
+                                         gender = class_attributes$gender)
+```
+
+ジェンダーを色に、入次数をサイズにして可視化
+
+```{r}
+forceNetwork(Links = class_edges_zeroindex, 
+             Nodes = class_attributes_zeroindex,
+             Source = "sender", Target = "receiver", 
+             Group = "gender", Nodesize = "indeg", NodeID = "id", 
+             opacity = 0.9, bounded = FALSE, opacityNoHover = .2)
+```
+
+### 5.6 Dynamic Network Visualizations
+
+時系列ネットワークデータを可視化する。
+
+大事なのは時間の幅を決めること。下手だと交流が起きない時間幅が発生してしまう。
+
+#### 5.6.1 Getting the Data Ready
+
+```{r}
+url3 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/example_edge_spells.csv"
+
+edge_spells <- read.csv(file = url3)
+head(edge_spells)
+```
+
+ノードの参入退出のデータをロード
+
+```{r}
+url4 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/example_vertex_spells.csv"
+
+vertex_spells <- read.csv(file = url4)
+head(vertex_spells)
+```
+
+ノードの属性情報もロード
+
+```{r}
+url5 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/class_attributes.txt"
+
+attributes_example2 <- read.table(file = url5, header = T)
+head(attributes_example2)
+```
+
+networkDynamicオブジェクトを作成する。
+
+```{r}
+library(networkDynamic)
+
+net_dynamic_interactions <- networkDynamic(vertex.spells = vertex_spells, 
+                                           edge.spells = edge_spells)
+```
+
+#### 5.6.2 Time Flattened Visualizations
+
+開始から20分ずつ、二つの平坦化したネットワークを作る
+
+```{r}
+extract_nets <- get.networks(net_dynamic_interactions, start = 0, 
+                             time.increment = 20)
+extract_nets
+```
+
+色を設定
+
+```{r}
+cols_example2 <- ifelse(attributes_example2$gnd == 2, "lightskyblue", "navy")
+```
+
+二つのネットワークを並べる
+
+```{r}
+par(mfrow = c(1, 2))
+
+plot(extract_nets[[1]], main = "Talk to Network, 0 to 20 Minutes", 
+     vertex.col = cols_example2, vertex.cex = 2)
+
+plot(extract_nets[[2]], main = "Talk to Network, 20 to 40 Minutes", 
+     vertex.col = cols_example2, vertex.cex = 2)
+```
+
+ノードの位置が2時点で異なって見づらいので、ノードの座標を固定する
+
+```{r}
+locs <- network.layout.fruchtermanreingold(extract_nets[[1]], layout.par = NULL)
+
+par(mfrow = c(1, 2))
+
+plot(extract_nets[[1]], main = "Talk to Network, 0 to 20 Minutes", 
+     vertex.col = cols, vertex.cex = 2, coord = locs)
+
+plot(extract_nets[[2]], main="Talk to Network, 20 to 40 Minutes",
+     vertex.col = cols, vertex.cex = 2, coord = locs)
+```
+
+#### 5.6.3 Dynamic Network Movies
+
+ndtvパッケージを用いて、ネットワークのアニメーションを作る
+
+```{r}
+pacman::p_load(ndtv)
+```
+
+```{r}
+slice.par <- list(start = 0, end = 43, interval = 1,
+                  aggregate.dur = 0, rule = "latest")
+
+set.network.attribute(net_dynamic_interactions, 'slice.par', slice.par)
+```
+
+htmlファイルをレンダーして出力する。
+
+```{r}
+render.d3movie(net_dynamic_interactions, displaylabels = FALSE, 
+               vertex.cex = 1.5, output.mode = "HTML", 
+               filename = "./output/classroom_movie1.html")
+```
+
+durationが0だとその時間ちょうどに起こった交流しか捉えられないので、1秒にする
+
+```{r}
+slice.par <- list(start = 0, end = 43, interval = 1,
+                  aggregate.dur = 1, rule = "latest")
+
+set.network.attribute(net_dynamic_interactions, 'slice.par', slice.par)
+
+render.d3movie(net_dynamic_interactions, displaylabels = FALSE, 
+               vertex.cex = 1.5, output.mode = "HTML",
+               filename = "./output/classroom_movie2.html")
+```
+
+ノードに色をつける
+
+```{r}
+slice.par <- list(start = 0, end = 43, interval = 1,
+                  aggregate.dur = 1, rule = "latest")
+
+set.network.attribute(net_dynamic_interactions, 'slice.par', slice.par)
+
+render.d3movie(net_dynamic_interactions, displaylabels = FALSE, 
+               vertex.cex = 1.5, vertex.col = cols, 
+               output.mode = "HTML", filename = "./output/classroom_movie3.html")
+```
+
+durationを10秒まで伸ばして、より大域的な構造を把握する
+
+```{r}
+slice.par <- list(start = 0, end = 43, interval = 10,
+                  aggregate.dur = 10, rule = "latest")
+
+set.network.attribute(net_dynamic_interactions, 'slice.par', slice.par)
+
+render.d3movie(net_dynamic_interactions, displaylabels = FALSE, 
+               vertex.cex = 1.5, vertex.col = cols, 
+               output.mode = "HTML", filename = "./output/classroom_movie4.html")
+```
+
+1秒間隔で10秒ごとの繋がりを可視化する
+
+```{r}
+slice.par <- list(start = 0, end = 43, interval = 1, 
+                  aggregate.dur = 10, rule = "latest")
+
+set.network.attribute(net_dynamic_interactions, 'slice.par', slice.par)
+
+render.d3movie(net_dynamic_interactions, displaylabels = FALSE, 
+               vertex.cex = 1.5, vertex.col = cols, 
+               output.mode = "HTML", filename = "./output/classroom_movie5.html")
+```
+
+座標を固定してみる
+
+```{r}
+# 必要なパッケージを読み込み
+library(ndtv)
+library(network)
+library(igraph)
+library(intergraph) 
+# 任意の時点でネットワークを取得
+net0 <- network.collapse(net_dynamic_interactions, at = 0)
+
+# network → igraph に変換
+igraph_net <- asIgraph(net0)
+
+# Fruchterman-Reingold レイアウトを計算
+coords <- layout_with_fr(igraph_net)
+
+# ↓ coords はノードの順番に対応した座標行列
+
+# d3movieのレンダリング（ノード位置を固定）
+render.d3movie(
+  net_dynamic_interactions,
+  displaypars = list(layout.par = list(coords = coords)),
+  usearrows = FALSE,
+  render.par = list(tween.frames = 10, show.time = TRUE),
+  output.mode = 'htmlWidget'
+)
+```
+
+## 6. Ego Network Data
+
+### 6.1 Working with Ego Network Data
+
+エゴネットワークデータはソシオセントリックデータとは違うアプローチが必要。
+
+GSSのデータを使ってエゴネットワークを分析する。
+
+```{r}
+url1 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/gss1985_ego_dat.csv"
+
+ego_dat <- read.csv(file = url1, stringsAsFactors = F) 
+```
+
+```{r}
+ego_dat[1:10, c("CASEID", "AGE", "EDUC", "RACE", "SEX", "HAPPY", "NUMGIVEN")]
+```
+
+ネームジェネレータに回答しなかった欠損値を除く
+
+```{r}
+ego_dat <- ego_dat[!is.na(ego_dat$NUMGIVEN), ]
+```
+
+属性データ読み込み
+
+```{r}
+url2 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/gss1985_alter_dat.csv"
+
+alter_dat <- read.csv(file = url2, stringsAsFactors = F)
+```
+
+```{r}
+alter_dat[1:10, c("CASEID", "ALTERID", "AGE", "EDUC", "RACE", "SEX", "KIN")] 
+```
+
+こっちは回答者のアルターの属性情報となっている
+
+```{r}
+nrow(ego_dat)
+```
+
+```{r}
+nrow(alter_dat)
+```
+
+アルター同士の関係データを読み込む
+
+```{r}
+url3 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/gss1985_alteralter_dat.csv"
+
+alteralter_dat <- read.csv(file = url3)
+```
+
+```{r}
+alteralter_dat[1:10, ]
+```
+
+ホモフィリーに興味があるよね。
+
+egorオブジェクトとしてエゴやアルターのデータをまとめる。これはtibbleとしてアクセスできる。
+
+```{r}
+pacman::p_load(egor)
+```
+
+```{r}
+egonetlist <-  egor(alters = alter_dat, egos = ego_dat, 
+                    aaties = alteralter_dat, alter_design = list(max = 5), 
+                    ID.vars = list(ego = "CASEID", alter ="ALTERID", 
+                                   source = "ALTER1", target = "ALTER2")) 
+```
+
+```{r}
+egonetlist
+```
+
+```{r}
+names(egonetlist) 
+```
+
+egoのデータフレームにアクセスする
+
+```{r}
+egonetlist[["ego"]][, 1:5]
+```
+
+アルターのデータフレームにアクセス。ID名が変わってる
+
+```{r}
+egonetlist[["alter"]][, 1:5]
+```
+
+アルター間のエッジのリストにアクセスする
+
+```{r}
+egonetlist[["aatie"]]
+```
+
+まずはネットワークの密度を計算する。これはエゴごとに計算される
+
+```{r}
+dens <- ego_density(egonetlist)
+head(dens)
+```
+
+密度が1のエゴと密度が0.8のエゴをチェック
+
+```{r}
+alteralter_dat[alteralter_dat$CASEID == 19850001, ]
+```
+
+```{r}
+alteralter_dat[alteralter_dat$CASEID == 19850002, ]
+```
+
+### 6.2 Plotting Networks
+
+igraphでネットワークを可視化する
+
+```{r}
+library(igraph)
+```
+
+```{r}
+igraph_nets <- as_igraph(egonetlist)
+igraph_nets[1:3] 
+```
+
+エゴはigraphに渡すと無視される（基本的には全てのアルターと繋がっているため情報があまりない）
+
+ノードの情報を取り出せる
+
+```{r}
+vertex_attr(igraph_nets[[1]], "SEX")
+```
+
+これは下記と同じ
+
+```{r}
+alter_dat[alter_dat$CASEID == 19850001, "SEX"]
+```
+
+最初の三つのエゴネットワークを描画
+
+```{r}
+par(mfrow = c(1, 3))
+purrr::walk(igraph_nets[1:3], plot)
+```
+
+ジェンダーに基づいてノードに色を塗る。laaplyなどで複数のネットワークに一度に適用する
+
+```{r}
+plotfunc_colorgender <- function(nets){ 
+  # Arguments: 
+  # nets: ego network of interest
+  
+  # extracting the attribute from the ego network:
+  cols <- vertex_attr(nets, "SEX") 
+
+  # now we use an ifelse statement to set color,
+  # light sky blue if gender equals female, blue otherwise:
+  cols <- ifelse(cols == "female", "lightskyblue", "blue")
+
+  # plotting ego network with nodes colored based on gender:
+  plot(nets, vertex.color = cols) 
+}
+```
+
+```{r}
+par(mfrow = c(1, 3))
+purrr::walk(igraph_nets[1:3], plotfunc_colorgender)
+```
+
+三つ目はジェンダー的同質性が高く、密度も薄いことがわかる。
+
+### 6.3 Homophily: Ego-Alter Attributes
+
+最初はエゴ-アルター間の属性の一致などの関係を見る
+
+#### 6.3.1 Proportion of Alters Matching Ego
+
+エゴとアルターの属性の一致度を、オリジナルの関数を使って計算する。ここでは性別を見る
+
+```{r}
+prop_same_function <- function(alt.attr, ego.attr){
+
+  # Arguments:
+  # alt.attr: alter attributes for a given ego
+  # ego.attr: ego attributes
+
+  # taking ego attribute and comparing to alter 
+  # attributes, summing up number of times they match
+  # ignoring missing data:
+  same <- sum(ego.attr == alt.attr, na.rm = T) 
+
+  # calculating proportion of ego-alter pairs that match:
+  # just for alters with no missing data
+  prop_same <- same / sum(!is.na(alt.attr))
+  
+  # making sure if ego is missing, then prop_same is also missing
+  prop_same[is.na(ego.attr)] <- NA
+  
+  return(prop_same) 
+} 
+```
+
+```{r}
+pmatch_sex <- comp_ply(egonetlist, alt.attr = "SEX", .f = prop_same_function, 
+                       ego.attr = "SEX") 
+head(pmatch_sex)
+```
+
+今度は親戚関係に絞って性別の一致を見る。
+
+```{r}
+egonetlist_kin <- subset(egonetlist, egonetlist[["alter"]]$KIN == 1, 
+                         unit = "alter") 
+```
+
+```{r}
+pmatch_sex_kin <- comp_ply(egonetlist_kin, alt.attr = "SEX", 
+                           .f = prop_same_function, ego.attr = "SEX") 
+```
+
+```{r}
+egonetlist_nonkin <- subset(egonetlist, egonetlist[["alter"]]$KIN == 0,
+                            unit = "alter") 
+pmatch_sex_nonkin <- comp_ply(egonetlist_nonkin, alt.attr = "SEX", 
+                              .f = prop_same_function, ego.attr = "SEX")
+```
+
+親戚、非親戚の計算結果を一つのデータフレームにする
+
+```{r}
+sexdat <- data.frame(pmatch_sex$result, pmatch_sex_kin$result, 
+                     pmatch_sex_nonkin$result)
+head(sexdat)
+```
+
+人種に関しても同じ計算をする。
+
+```{r}
+pmatch_race <- comp_ply(egonetlist, alt.attr = "RACE", 
+                        .f = prop_same_function, ego.attr = "RACE") #all alters
+
+pmatch_race_kin <- comp_ply(egonetlist_kin, alt.attr = "RACE", 
+                            .f = prop_same_function, ego.attr = "RACE") #kin
+
+pmatch_race_nonkin <- comp_ply(egonetlist_nonkin, alt.attr = "RACE", 
+                               .f = prop_same_function, ego.attr = "RACE") #nonkin
+
+racedat <- data.frame(pmatch_race$result, pmatch_race_kin$result, 
+                      pmatch_race_nonkin$result)
+head(racedat)
+```
+
+要約統計を見る
+
+```{r}
+apply(sexdat, MARGIN = 2, FUN = summary)
+```
+
+```{r}
+apply(racedat, MARGIN = 2, FUN = summary)
+```
+
+ジェンダーより人種の方が同類性が高い。
+
+#### 6.3.2 Analyzing Homophily at the Dyadic Level: Ego-Alter Pairs
+
+個々のエゴネットワークだけでなく、全体についても属性の組み合わせを見ることができる。
+
+まずはデータフレームにまとめる。
+
+```{r}
+ego_alter_dat <- data.frame(as_alters_df(egonetlist, include.ego.vars = TRUE))
+```
+
+1行が別々のエゴ-アルターペアを指すデータフレームができる
+
+```{r}
+head(ego_alter_dat)
+```
+
+alterの列名にも_aleterを付け足す
+
+```{r}
+cnames <- colnames(ego_alter_dat)
+which_age_column <- which(colnames(ego_alter_dat) == "AGE")
+which_educ_cat_column <- which(colnames(ego_alter_dat) == "EDUC_CATEGORICAL")
+
+alter_columns <- which_age_column:which_educ_cat_column
+cnames[alter_columns] <- paste(cnames[alter_columns], "_alter", sep = "") 
+colnames(ego_alter_dat) <- cnames 
+head(ego_alter_dat)
+```
+
+性別の組み合わせをクロス表にする
+
+```{r}
+sextab <- table(ego_alter_dat[, "SEX_ego"], ego_alter_dat[, "SEX_alter"])
+sextab
+```
+
+同性のつながりの割合を計算
+
+```{r}
+sum(diag(sextab)) / sum(sextab)
+```
+
+人種についても見る。
+
+```{r}
+racetab <- table(ego_alter_dat[, "RACE_ego"], ego_alter_dat[, "RACE_alter"])
+sum(diag(racetab)) / sum(racetab) 
+```
+
+ランダムに繋がった時の属性のオッズ比と実際のオッズ比を比較する。
+
+```{r}
+oddsratio_function <-  function(egoalter_tab, attribute) {
+  
+  # Arguments: 
+  # egoalter_tab: table of interest
+  # attribute: vector representing attribute of interest in the sample 
+  
+  # We first calculate the number of dyads that match and mismatch on the
+  # attribute based on the observed data. 
+  
+  # We calculate the number matching by summing up over the diagonal of the 
+  # the table (as these are cases where ego and alter have the same value).
+  
+  match <- sum(diag(egoalter_tab)) 
+  
+  # We now calculate the number mismatching by taking the total number of 
+  # dyads and subtracting the number that match (calculated above).
+
+  notmatch <- sum(egoalter_tab) - match
+  
+  # Now we calculate our chance expectations, defined as what would happen
+  # if we randomly paired all respondents from the data (defined in the 
+  # input attribute vector), and calculated how many of those 
+  # pairs were the same (and different) on the attribute of interest.
+  
+  # We first do a table on the attribute, to see how many people fall 
+  # into each category.
+  
+  freq <- table(attribute) 
+  
+  # We next calculate the total number of random pairings, 
+  # assuming we pair all respondents with all respondents. 
+  # This is simply the number of respondents times the number of 
+  # respondents minus 1, as we assume we are not pairing 
+  # people with themself.
+  
+  total_dyads <- sum(freq) * (sum(freq) - 1)
+
+  # We now calculate the number of random pairings expected to 
+  # match by chance.
+  # Formally, we take the number in each category (e.g., number of men) and
+  # multiply that number by itself (minus 1 as we again 
+  # assume people are not paired with themself), showing
+  # how many pairs would be the same if we paired all respondents with all 
+  # respondents. Remember that R will multiply things element-wise, 
+  # so the following bit of code will take the first value in freq
+  # and multiply it by the first element in freq-1. We sum up the values 
+  # to get the total number of dyads that are expected to match.
+  
+  match_chance <- sum(freq * (freq - 1))
+  
+  # We now calculate the number of dyads not matching by chance as the 
+  # difference between the total number of dyads and 
+  # those matching by chance.
+
+  notmatch_chance <-  total_dyads - match_chance 
+  
+  # And finally we can calculate the odds ratio of 
+  # observed odds of matching to odds of matching by chance
+
+  or <- (match * notmatch_chance) / (notmatch * match_chance) 
+
+  return(or)
+} 
+```
+
+```{r}
+oddsratio_function(egoalter_tab = sextab, attribute = ego_dat[, "SEX"])
+```
+
+```{r}
+oddsratio_function(egoalter_tab = racetab, attribute = ego_dat[, "RACE"])
+```
+
+オッズ比はランダムの1.5倍から7倍もある（＝偶然じゃない）。
+
+親族かどうかでオッズ比が変わるかを見る。
+
+親族関係では、
+
+```{r}
+#odds of matching for kin ties, gender
+kin_sextab <- table(ego_alter_dat[ego_alter_dat$KIN == 1, "SEX_ego"], 
+                    ego_alter_dat[ego_alter_dat$KIN == 1, "SEX_alter"])
+
+oddsratio_function(egoalter_tab = kin_sextab, attribute = ego_dat[, "SEX"]) 
+```
+
+```{r}
+#odds of matching for kin ties, race
+kin_racetab <- table(ego_alter_dat[ego_alter_dat$KIN == 1, "RACE_ego"], 
+                     ego_alter_dat[ego_alter_dat$KIN == 1, "RACE_alter"])
+
+oddsratio_function(egoalter_tab = kin_racetab, attribute = ego_dat[, "RACE"]) 
+```
+
+非親族関係では、
+
+```{r}
+#odds of matching for non-kin ties, gender
+nonkin_sextab <- table(ego_alter_dat[ego_alter_dat$KIN == 0, "SEX_ego"], 
+                       ego_alter_dat[ego_alter_dat$KIN == 0, "SEX_alter"])
+
+oddsratio_function(egoalter_tab = nonkin_sextab, attribute = ego_dat[, "SEX"]) 
+```
+
+```{r}
+#odds of matching for non-kin ties, race
+nonkin_racetab <- table(ego_alter_dat[ego_alter_dat$KIN == 0, "RACE_ego"], 
+                        ego_alter_dat[ ego_alter_dat$KIN == 0, "RACE_alter"])
+
+oddsratio_function(egoalter_tab = nonkin_racetab, attribute = ego_dat[, "RACE"])
+```
+
+孤立ノードを除いて性別のオッズ比を見る。
+
+```{r}
+oddsratio_function(egoalter_tab = sextab, 
+                   attribute = ego_dat$SEX[ego_dat$NUMGIVEN > 0]) 
+```
+
+### 6.4 Homophily: Alter Attributes
+
+アルターだけに注目することもできる。
+
+シャノンのエントロピーを用いて、アルターの多様性がどれだけあるかを測定する。
+
+まずは性別のエントロピーから。
+
+```{r}
+sex_diversity <- alts_diversity_entropy(egonetlist, alt.attr = "SEX", 
+                                        base = exp(1))
+head(sex_diversity) 
+```
+
+人種の縁と表示順ピーも計算する。
+
+```{r}
+race_diversity <- alts_diversity_entropy(egonetlist, alt.attr = "RACE", 
+                                         base = exp(1))
+head(race_diversity)
+```
+
+孤立ノードにはNAを割り当てる。
+
+```{r}
+sex_diversity[ego_dat$NUMGIVEN <= 1, "entropy"] <-  NA
+race_diversity[ego_dat$NUMGIVEN <= 1, "entropy"] <-  NA
+```
+
+要約統計を出す。
+
+```{r}
+summary(sex_diversity[, "entropy"])
+```
+
+```{r}
+summary(race_diversity[, "entropy"])
+```
+
+教育年数のような連続尺度にも分析を適用できる（平均値を取るなど）
+
+```{r}
+mean_altereduc <- comp_ply(egonetlist, alt.attr = "EDUC", .f = mean, 
+                           na.rm = TRUE) 
+summary(mean_altereduc[, "result"])
+```
+
+### 6.5 Ego Networks as Predictors
+
+幸福度をネットワーク指標（エゴネットワークのサイズやネットワークの構成）で予測する。
+
+```{r}
+ego_dat$HAPPY_FACTOR <- factor(ego_dat$HAPPY, levels = c(3, 2, 1), 
+                            labels = c("not too happy", "pretty happy", 
+                                     "very happy"))
+ego_dat$RACE_FACTOR <- factor(ego_dat$RACE, levels = c("white", "asian", 
+                                                       "black", "hispanic", 
+                                                       "other")) 
+ego_dat$SEX_FACTOR <- factor(ego_dat$SEX)
+```
+
+計算した密度などのネットワーク指標をデータフレームに加える。
+
+```{r}
+ego_dat$DENSITY <- dens[["density"]] #  getting values out of tibble format
+ego_dat$RACE_DIVERSITY <- race_diversity[["entropy"]] 
+ego_dat$MEAN_ALTEREDUC <- mean_altereduc[["result"]] 
+```
+
+順序ロジット分析で予測値を作る。
+
+```{r}
+library(MASS) 
+```
+
+簡単のため、欠損値をリストワイズで除く。
+
+```{r}
+ego_dat_nomiss <- na.omit(ego_dat[, c("HAPPY_FACTOR", "NUMGIVEN", "DENSITY", 
+                                     "MEAN_ALTEREDUC", "RACE_DIVERSITY", 
+                                     "EDUC", "AGE", "RACE_FACTOR", 
+                                     "SEX_FACTOR")])
+```
+
+```{r}
+summary(happy_mod1 <- polr(HAPPY_FACTOR ~ NUMGIVEN + DENSITY, 
+                           data = ego_dat_nomiss)) 
+```
+
+密度が高いネットワークを持っている人ほど幸せになる傾向にある。
+
+ネットワークサイズはあまり効いていない。
+
+```{r}
+summary(happy_mod2 <- polr(HAPPY_FACTOR ~ NUMGIVEN + DENSITY + EDUC + AGE + 
+                             RACE_FACTOR + SEX_FACTOR, 
+                           data = ego_dat_nomiss))
+```
+
+密度は統制しても効いている。黒人であることも有意に幸福度を下げる。教育は長いほど若干幸せになる。
+
+アルターの平均教育歴と人種多様性も加える。
+
+```{r}
+summary(happy_mod3 <- polr(HAPPY_FACTOR ~ NUMGIVEN + DENSITY + EDUC + AGE + 
+                           RACE_FACTOR + SEX_FACTOR + MEAN_ALTEREDUC + 
+                           RACE_DIVERSITY, data = ego_dat_nomiss))
+```
+
+高学歴のアルターに囲まれた人の方が幸せになりやすい。
+
+### 6.6 Working with One Input File
+
+一つのファイルとして保存されたものから三つのデータフレームを作成して分析する。
+
+```{r}
+url4 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/gss1985_egonetworks.csv"
+
+egonets <- read.csv(file = url4)
+head(egonets)
+```
+
+```{r}
+egonets$netsize <- ifelse(egonets$NUMGIVEN == 6, 5, egonets$NUMGIVEN) 
+egonets <- egonets[!is.na(egonets$NUMGIVEN), ] #欠損値処理
+```
+
+エゴに対応する部分を抜き出してエゴの属性データフレームにする。
+
+```{r}
+ego_dat_fromonefile <- egonets[, 1:13]
+```
+
+アルターのデータフレームについてはワイド型をロング型に変換する。
+
+```{r}
+create_alter_data <- function(egonets, netsize, var_names, egoID){
+  # Arguments: 
+  # egonets: ego network data frame
+  # netsize: vector of ego network size
+  # var_names: names of variables to put on alter data frame (assumed to be
+  # var.name1, var.name2, for each alter)
+  # egoID: name of id of ego on ego network data frame
+
+  # creating empty list to hold output for each variable:
+  overall_list <- list() 
+
+  # taking out the isolates as they have no alters:
+  egonets_noisolates <- egonets[netsize > 0, ] 
+  
+  # redefining network size after taking out isolates:
+  netsize_updated <- netsize[netsize > 0] 
+
+  # running over each variable name:
+  for (p in 1:length(var_names)){
+  var_list <- list()
+  alter_list <- list()
+  
+  # running over each ego:
+    for (x in 1:nrow(egonets_noisolates)){
+      # getting alter id number:
+          alter_nums <- rep(1:netsize_updated[x], times = 1)
+      
+      # Now we grab the alter columns for that ego and put those 
+      # values in a larger list so we can stack them later on 
+      # into one big vector (one for each variable of interest)
+          alt_cols <- paste(rep(var_names[p], each = netsize_updated[x]), 
+                            alter_nums, sep = "")
+
+          var_list[[x]] <- egonets_noisolates[x, alt_cols]
+          
+          alter_list[[x]] <- alter_nums
+    }
+  
+  # stacking all alter values into one long column
+  var <- unlist(var_list) 
+  overall_list[[p]] <- var
+  } 
+
+  # putting all new variables together:
+  dat <- data.frame(do.call(data.frame, overall_list)) 
+
+  # putting useful column names on data frame
+  colnames(dat) <- var_names 
+
+  # adding egoID and alterID to data frame:
+  dat <- cbind(rep(egonets_noisolates[, egoID], netsize_updated), 
+          unlist(alter_list), dat) 
+
+  colnames(dat)[1:2] <- c(egoID, "alterID")
+
+  return(dat)
+}
+```
+
+```{r}
+alter_dat_fromonefile <- create_alter_data(egonets = egonets, 
+                                           netsize = egonets$netsize, 
+                                           var_names = c("AGE", "EDUC", "RACE",
+                                                         "SEX", "RELIG"), 
+                                           egoID = "CASEID")
+```
+
+```{r}
+head(alter_dat_fromonefile)
+```
+
+alter-alter関係のデータフレームを作る。
+
+```{r}
+create_alteralter_data <- function(egonets, netsize, aa_tie_data, 
+                                     egoID, max_alter){
+  # Arguments:
+  # egonets: ego network data frame 
+  # netsize: vector of ego network size 
+  # aa_tie_data : data for each ego showing ties between alters; 
+  # assumed to be ordered by 1-2; 1-3; 1-4; 1-5, etc. on the columns
+  # egoID: name of id of ego on ego network data frame
+  # max_alter: maximum of number of alter of which alter-alter tie 
+  # data was reported on
+
+  overall_list <- list()
+  
+  # taking out the isolates and those
+  # with only one alter as they have no alter-alter ties 
+  egonets_noisolates <- egonets[netsize > 1, ] 
+  
+  # also taking out the 
+  # isolates and those with only one alter 
+  # for the alter-alter tie input data
+  alteralter_tie_data <- aa_tie_data[netsize > 1, ] 
+
+  # redefining network size after taking out isolates:
+  netsize_updated <- netsize[netsize > 1] 
+  
+  # defining possible alter-alter ties
+  alter_ids <- t(combn(max_alter, 2)) 
+  
+  # running over each ego:
+  for (x in 1:nrow(egonets_noisolates)){
+    
+  # First we create a data frame based on the ego ids, the possible 
+  # alter-alter ties and the weights for each alter-alter tie, 
+  # based on the  input data for that ego
+    alter_dat_row <- data.frame(egoID = egonets_noisolates[x, egoID], 
+                                alter_ids, 
+                                weight = unlist(alteralter_tie_data[x, ]))
+    
+  # Here we reduce some of the rows (corresponding to alter-alter ties) 
+  # if ego had less than the max number of alters or if some 
+  # of the alter-alter ties are not present (assumed if value 
+  # is equal to 0 or NA)
+    alter_dat_row <- alter_dat_row[alter_dat_row[, 2] <= netsize_updated[x] & 
+                              alter_dat_row[, 3] <= netsize_updated[x] & 
+                              !is.na(alter_dat_row$weight) & 
+                              alter_dat_row$weight != 0, ]
+
+    overall_list[[x]] <- alter_dat_row
+  }
+
+  #putting all alter-alter ties, by ego, in one data frame:
+  alter_alter_dat <- do.call(rbind, overall_list) 
+
+  #putting useful column names on the data frame:
+  colnames(alter_alter_dat) <- c(egoID, "source", "target", "weight")
+  rownames(alter_alter_dat) <- 1:nrow(alter_alter_dat)
+  
+  return(alter_alter_dat)
+}
+```
+
+```{r}
+aa_tie_data <- egonets[, 64:73]
+
+alteralter_dat_fromonefile <- create_alteralter_data(egonets = egonets, 
+                                                     netsize = egonets$netsize, 
+                                                     aa_tie_data = aa_tie_data,
+                                                     egoID = "CASEID", 
+                                                     max_alter = 5)
+```
+
+```{r}
+head(alteralter_dat_fromonefile)
+```
+
+これで三つのデータフレームができたので、まとめてegorオブジェクトをつくる。
+
+```{r}
+egonetlist2 <- egor(alters = alter_dat_fromonefile, 
+                    egos = ego_dat_fromonefile, 
+                    aaties = alteralter_dat_fromonefile, 
+                    alter_design = list(max = 5), 
+                    ID.vars = list(ego = "CASEID", alter = "alterID", 
+                                   source = "source", target = "target")) 
+```
+
+```{r}
+egonetlist2
+```
+
+## 7. Dyads and Triads
+
+### 7.1 Setting up the Session
+
+```{r}
+library(sna)
+```
+
+とあるハイテク企業の人間関係データを用いる。
+
+```{r}
+url1 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/krackhardt_advice.csv"
+
+advice_data_frame <- read.csv(file = url1) 
+head(advice_data_frame)
+```
+
+それぞれの行がダイアド関係を表している。
+
+関係ありの行だけに絞る。
+
+```{r}
+advice_edgelist <- advice_data_frame[advice_data_frame$advice_tie == 1, ]
+```
+
+ノードの属性情報
+
+```{r}
+url2 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/krackhardt_attributes.csv"
+
+attributes <- read.csv(file = url2)
+attributes
+```
+
+アドバイス関係について、有向ネットワークを作成。
+
+```{r}
+krack_advice <- network(x = advice_edgelist, directed = T, 
+                        vertices = attributes) 
+krack_advice
+```
+
+友人関係のネットワークも読み込む。
+
+```{r}
+url3 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/krackhardt_friendship.csv"
+
+friends_data_frame <- read.csv(file = url3)
+head(friends_data_frame)
+```
+
+友人関係がある行に絞り込む。
+
+```{r}
+friends_edgelist <- friends_data_frame[friends_data_frame$friendship_tie == 1, ]
+krack_friendship <-  network(x = friends_edgelist, directed = T, 
+                             vertices = attributes)
+```
+
+作成したネットワークを可視化する。
+
+まずはアドバイスネットワークを可視化。
+
+```{r}
+library(GGally)
+indeg_advice <- degree(krack_advice, cmode = "indegree")
+```
+
+入次数でノードサイズを変える。
+
+色を組織における階層で分ける。
+
+```{r}
+ggnet2(krack_advice, node.color = "LEVEL", node.size = indeg_advice,
+       palette = c("1" = "navy", "2" = "blue", "3" = "lightskyblue"), 
+       edge.size = .5, arrow.size = 3,  arrow.gap = 0.02, 
+       edge.color = "grey80") +
+  guides(size = "none")
+```
+
+同じことを友人関係のネットワークにも行う。
+
+```{r}
+indeg_friendship <- degree(dat = krack_friendship, cmode = "indegree")
+
+ggnet2(krack_friendship, node.color = "LEVEL", node.size = indeg_friendship,
+       palette = c("1" = "navy", "2" = "blue", "3" = "lightskyblue"), 
+       edge.size = .5, arrow.size = 3, arrow.gap = 0.02,
+       edge.color = "grey80") +
+  guides(size = "none")
+```
+
+アドバイスネットワークの方が密なことは読み取れるが、それ以外の違いは分かりにくい。
+
+### 7.2 Dyadic Processes
+
+#### 7.2.1 Dyad Census and Reciprocity
+
+ダイアドがヌル、非対称、対称のどれに当たるかを数える。まずは友人関係から。
+
+```{r}
+dyadcensus_friendship <- dyad.census(krack_friendship)
+dyadcensus_friendship
+```
+
+互恵関係の割合を計算する。
+
+```{r}
+recip_friendship <- grecip(dat = krack_friendship, measure = "dyadic.nonnull")
+recip_friendship 
+```
+
+アドバイスネットワークの互恵性と比較してみる。
+
+```{r}
+recip_advice <- grecip(dat = krack_advice, measure = "dyadic.nonnull")
+recip_advice
+```
+
+そんなに変わらない。
+
+#### 7.2.2 Conditional Uniform Graph Tests
+
+計算した指標が大きいのか小さいのか、ランダムに繋がった場合のネットワーク＝ベースラインモデルの数値と比較する。
+
+```{r}
+cug_recip <- cug.test(dat = krack_friendship, FUN = grecip, 
+                      mode = c("digraph"), 
+                      cmode = c("edges"), reps = 1000, 
+                      FUN.args = list(measure = "dyadic.nonnull"))
+cug_recip
+```
+
+観測値はobs.statに、シミュレートしたベースラインの値はrep.statに格納されている。
+
+```{r}
+cug_recip$obs.stat
+```
+
+```{r}
+summary(cug_recip$rep.stat)
+```
+
+ランダムだと互恵割合は0.14になることが分かる。どの場合であっても観測値を超えることはなく、偶然よりは高い確率で互恵関係が結ばれていることが分かる。
+
+#### 7.2.3 Dyad Census by Attributes of Nodes
+
+属性ごとの組み合わせで対称的つながりになりやすいものがあるかを検証する。
+
+組織内の階層で見てみる。まずは度数分布から。
+
+```{r}
+table(attributes$LEVEL)
+```
+
+同じ階層と別の階層での友人関係が互恵的かどうかを分けて計算する。
+
+```{r}
+same_level <- outer(attributes$LEVEL, attributes$LEVEL, "==") 
+```
+
+友人関係の行列を出力する関数を書く。
+
+```{r}
+dyad_mat_function <- function(dat){
+  # Arguments:
+  # dat: network object
+
+  # getting matrix form of network
+  mat <- as.matrix(dat) 
+  
+  # putting NA diagonal as we don’t want to consider self-ties
+  diag(mat) <- NA 
+
+  # Next, we do a little trick where we take the matrix and 
+  # add it to its transpose, yielding a matrix of 0s, 1s 
+  # and 2s. If it is null, the resulting value will be 0 
+  # (neither ij nor ji exists); if it is asymmetric there
+  # will be a 1 (as ij or ji exists but not both); and 
+  # if it is mutual there will be a 2 (as there are ties 
+  # from ij and ji).
+  dyad_mat <- mat + t(mat) 
+
+  # Now we label for ease of interpretation:
+  dyad_mat[dyad_mat == 0] <- "null" 
+  dyad_mat[dyad_mat == 1] <- "asym"
+  dyad_mat[dyad_mat == 2] <- "mut"
+  
+  return(dyad_mat)
+}
+```
+
+```{r}
+friends_dyads <- dyad_mat_function(krack_friendship)
+friends_dyads[1:5, 1:5] 
+```
+
+これの数え上げを２で割ると、最初に計算した繋がりの種類と同じものが出る。
+
+```{r}
+table(friends_dyads) / 2
+```
+
+同じ階層の友人関係の種類を数える。
+
+```{r}
+table(friends_dyads[same_level == TRUE]) / 2
+```
+
+違う階層間の友人関係も数える。
+
+```{r}
+table(friends_dyads[same_level == FALSE]) / 2
+```
+
+同じ階層にいた方が互恵関係になりやすいことが分かる。
+
+#### 7.2.4 Advice and Friendship Together
+
+友人関係が非対称のとき、アドバイス関係も非対称になりやすいか？などを検証する。
+
+まずはアドバイス関係でも同じ行列を作る。
+
+```{r}
+advice_dyads <- dyad_mat_function(krack_advice)
+advice_dyads[1:5, 1:5]
+```
+
+友人関係とアドバイス関係のつながりの種類をクロスで集計する。
+
+```{r}
+table(friends_dyads, advice_dyads) / 2
+```
+
+非対称の友情は非対称のアドバイス関係を招きがち。対称な友情はそれほど対称なアドバイス関係にはつながらない。
+
+### 7.3 Triadic Processes
+
+#### 7.3.1 Triad Census
+
+全部で16種類のトライアドのあり方がある。
+
+まずは友人関係のトライアドを数え上げ。
+
+```{r}
+triads_friendship <- triad.census(krack_friendship)
+triads_friendship
+```
+
+続いてアドバイス関係。
+
+```{r}
+triads_advice <- triad.census(krack_advice) 
+triads_advice
+```
+
+比較しやすくする。
+
+```{r}
+triad_data <- data.frame(advice = t(triads_advice), 
+                         friendship = t(triads_friendship))
+triad_data
+```
+
+階層的な三者関係がアドバイスネットワークには現れがち。
+
+友人関係ネットワークには推移的な関係が現れがち。
+
+CUGテストを使って、トライアドの現れ方が偶然と異なるかを検定する。
+
+```{r}
+count_triads_function <- function(dat, triad_names){
+  # Arguments:
+  # dat: the network object
+  # triad_names: the name of the triad type
+  
+  triads <- triad.census(dat) # calculating the triad census
+  triads[1, triad_names] # grabbing counts of triad of interest
+}
+```
+
+トライアドの種類ごとに検定する。
+
+```{r}
+count_triads_function(krack_advice, triad_names = c("030T"))
+```
+
+```{r}
+cug_triads_advice <- cug.test(krack_advice, 
+                              FUN = count_triads_function, 
+                              mode = c("digraph"), 
+                              cmode = c("dyad.census"), reps = 1000, 
+                              FUN.args = list(triad_names = c("030T"))) 
+```
+
+```{r}
+cug_triads_advice
+```
+
+偶然よりは多く030Tのトライアドが出現していることが分かる。
+
+友人関係でも同じ検定をする。
+
+```{r}
+cug_triads_friendship <- cug.test(krack_friendship, 
+                                  FUN = count_triads_function, 
+                                  mode = c("digraph"), 
+                                  cmode = c("dyad.census"), reps = 1000, 
+                                  FUN.args = list(triad_names = c("030T")))
+cug_triads_friendship
+```
+
+友人関係の場合、それほど偶然とも言え無さそう。
+
+具体的な値も見る。
+
+```{r}
+cug_triads_friendship$obs.stat
+```
+
+```{r}
+summary(cug_triads_friendship$rep.stat) 
+```
+
+他のタイプのトライアド（120U）ならどうだろう。
+
+```{r}
+cug_triads_friendship2 <- cug.test(krack_friendship, 
+                                   FUN = count_triads_function, 
+                                   mode = c("digraph"), 
+                                   cmode = c("dyad.census"), reps = 1000,
+                                   FUN.args = list(triad_names = c("120U")))
+cug_triads_friendship2
+```
+
+完全に対称ではないがバランスがとれたトライアド関係は、友人関係では起きやすいことが分かる。
+
+こうした関係性の違いはダイアド分析では分からない。
+
+全てのトライアド関係について一度に検定する関数を用意してある。
+
+```{r}
+source("https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/R/CUGtest_alltriads.R")
+```
+
+```{r}
+CUG_test_table <- CUGtest_alltriads(dat = krack_friendship, 
+                                    mode = "digraph", 
+                                    cmode = "dyad.census", reps = 1000)
+CUG_test_table
+```
+
+#### 7.3.2 Transitivity
+
+推移性の割合も良いネットワークの指標になる。
+
+トライアドで「友達の友達は友達」の関係性。
+
+```{r}
+gtrans(dat = krack_advice, measure = "weak") 
+```

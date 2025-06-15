@@ -1,0 +1,3 @@
+"0","ego_dat$DENSITY <- dens[[""density""]] #  getting values out of tibble format"
+"0","ego_dat$RACE_DIVERSITY <- race_diversity[[""entropy""]] "
+"0","ego_dat$MEAN_ALTEREDUC <- mean_altereduc[[""result""]] "

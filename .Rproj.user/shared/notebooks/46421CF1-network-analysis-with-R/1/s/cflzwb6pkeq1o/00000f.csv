@@ -1,0 +1,6 @@
+"0","egonetlist2 <- egor(alters = alter_dat_fromonefile, "
+"0","                    egos = ego_dat_fromonefile, "
+"0","                    aaties = alteralter_dat_fromonefile, "
+"0","                    alter_design = list(max = 5), "
+"0","                    ID.vars = list(ego = ""CASEID"", alter = ""alterID"", "
+"0","                                   source = ""source"", target = ""target"")) "

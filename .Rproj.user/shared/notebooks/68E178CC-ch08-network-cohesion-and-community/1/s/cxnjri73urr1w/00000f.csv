@@ -1,0 +1,5 @@
+"0","par(mfrow = c(1, 2))"
+"0","layout <- layout.fruchterman.reingold(net182_friend)"
+"0","plot(net182_friend_und, layout = layout, #note the use of layout"
+"0","     vertex.color = mems_wt_4step, edge.color = ""light gray"","
+"0","     vertex.size = 20, main = ""Walktrap: 4 Steps"")"

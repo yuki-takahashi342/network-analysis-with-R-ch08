@@ -1,0 +1,7 @@
+"0","isolates <- which(degree(net182_friend_und) == 0)"
+"0","net182_noisolates <- delete_vertices(net182_friend_und, isolates)"
+"0","vertex_connectivity(graph = net182_noisolates)"
+"1","[1]"
+"1"," 4"
+"1","
+"

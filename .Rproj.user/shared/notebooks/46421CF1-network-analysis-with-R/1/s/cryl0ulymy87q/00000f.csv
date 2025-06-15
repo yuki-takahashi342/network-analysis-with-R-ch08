@@ -1,0 +1,7 @@
+"0","aa_tie_data <- egonets[, 64:73]"
+"0",""
+"0","alteralter_dat_fromonefile <- create_alteralter_data(egonets = egonets, "
+"0","                                                     netsize = egonets$netsize, "
+"0","                                                     aa_tie_data = aa_tie_data,"
+"0","                                                     egoID = ""CASEID"", "
+"0","                                                     max_alter = 5)"

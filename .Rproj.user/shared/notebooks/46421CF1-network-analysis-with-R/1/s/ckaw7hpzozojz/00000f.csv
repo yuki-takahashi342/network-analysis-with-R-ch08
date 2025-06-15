@@ -1,0 +1,2 @@
+"0","egonets$netsize <- ifelse(egonets$NUMGIVEN == 6, 5, egonets$NUMGIVEN) "
+"0","egonets <- egonets[!is.na(egonets$NUMGIVEN), ] #欠損値処理"

@@ -1,0 +1,3 @@
+"0","plot(net182_friend, vertex.label = NA, vertex.size = 10,"
+"0","     edge.arrow.size = .25, edge.arrow.width = 1,"
+"0","     edge.color = ""light gray"", vertex.frame.color = NA)"

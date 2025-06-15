@@ -1,0 +1,6 @@
+"0","ggplot(summary_data, aes(num_communities, modularity)) +"
+"0","  geom_bar(stat = ""identity"", fill = ""grey"") +"
+"0","  geom_line(color = ""black"", linetype = ""solid"") +"
+"0","  geom_point(shape = 19, size = 1, color = ""black"") +"
+"0","  labs(title = ""Modularity by Number of Communities"","
+"0","       x = ""Number of Communities"", y = ""Modularity"")"

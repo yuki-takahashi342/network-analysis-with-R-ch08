@@ -1,0 +1,3 @@
+"0","url2 <- ""https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/class555_attributedata.csv"""
+"0",""
+"0","class_attributes <- read.csv(file = url2, stringsAsFactors = T)"

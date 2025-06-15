@@ -1,0 +1,6 @@
+"0","set.seed(200)"
+"0",""
+"0","impute_tie <- outgoing_ties_prob == 1"
+"0",""
+"0","outgoing_ties_prob[impute_tie] <- rbinom(outgoing_ties_prob[impute_tie], "
+"0","                                          size = 1, prob = p) "

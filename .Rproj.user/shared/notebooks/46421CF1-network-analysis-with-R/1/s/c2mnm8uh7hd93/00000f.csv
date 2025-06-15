@@ -1,0 +1,7 @@
+"0","ego_dat$HAPPY_FACTOR <- factor(ego_dat$HAPPY, levels = c(3, 2, 1), "
+"0","                            labels = c(""not too happy"", ""pretty happy"", "
+"0","                                     ""very happy""))"
+"0","ego_dat$RACE_FACTOR <- factor(ego_dat$RACE, levels = c(""white"", ""asian"", "
+"0","                                                       ""black"", ""hispanic"", "
+"0","                                                       ""other"")) "
+"0","ego_dat$SEX_FACTOR <- factor(ego_dat$SEX)"

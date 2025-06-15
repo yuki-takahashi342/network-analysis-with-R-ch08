@@ -1,0 +1,3 @@
+"0","url2 <- ""https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/class237_sem1_attributes.txt"""
+"0",""
+"0","sem1_attributes <- read.table(file = url2,  header = T)"

@@ -1,0 +1,1 @@
+"0","cols_example2 <- ifelse(attributes_example2$gnd == 2, ""lightskyblue"", ""navy"")"

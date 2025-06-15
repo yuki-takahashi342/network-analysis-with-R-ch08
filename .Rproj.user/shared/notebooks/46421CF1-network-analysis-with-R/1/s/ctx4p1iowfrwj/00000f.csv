@@ -1,0 +1,4 @@
+"0","ego_dat_nomiss <- na.omit(ego_dat[, c(""HAPPY_FACTOR"", ""NUMGIVEN"", ""DENSITY"", "
+"0","                                     ""MEAN_ALTEREDUC"", ""RACE_DIVERSITY"", "
+"0","                                     ""EDUC"", ""AGE"", ""RACE_FACTOR"", "
+"0","                                     ""SEX_FACTOR"")])"

@@ -1,0 +1,3 @@
+"0","dist_listwise_delete <- distances(graph = net_listwise_delete, mode = ""out"")"
+"0",""
+"0","diag(dist_listwise_delete) <-  NA "

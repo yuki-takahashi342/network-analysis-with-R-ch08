@@ -1,0 +1,3 @@
+"0","plot(net182_friend_und, layout = layout, #note the use of layout"
+"0","     vertex.color = mems_wt_3step, edge.color = ""light gray"","
+"0","     vertex.size = 20, main = ""Walktrap: 3 Steps"")"

@@ -1,0 +1,2 @@
+"0","sex_diversity[ego_dat$NUMGIVEN <= 1, ""entropy""] <-  NA"
+"0","race_diversity[ego_dat$NUMGIVEN <= 1, ""entropy""] <-  NA"

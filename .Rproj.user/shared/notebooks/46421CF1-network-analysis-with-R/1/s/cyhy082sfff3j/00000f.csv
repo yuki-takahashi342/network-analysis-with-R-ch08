@@ -1,0 +1,3 @@
+"0","triad_data <- data.frame(advice = t(triads_advice), "
+"0","                         friendship = t(triads_friendship))"
+"0","triad_data"

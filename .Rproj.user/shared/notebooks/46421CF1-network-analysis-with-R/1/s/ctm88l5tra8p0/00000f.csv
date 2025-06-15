@@ -1,0 +1,5 @@
+"0","alter_dat_fromonefile <- create_alter_data(egonets = egonets, "
+"0","                                           netsize = egonets$netsize, "
+"0","                                           var_names = c(""AGE"", ""EDUC"", ""RACE"","
+"0","                                                         ""SEX"", ""RELIG""), "
+"0","                                           egoID = ""CASEID"")"

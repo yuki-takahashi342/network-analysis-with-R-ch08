@@ -1,0 +1,4 @@
+"0","url3 <- ""https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/example_edge_spells.csv"""
+"0",""
+"0","edge_spells <- read.csv(file = url3)"
+"0","head(edge_spells)"

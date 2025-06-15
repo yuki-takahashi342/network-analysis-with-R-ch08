@@ -1,0 +1,4 @@
+"0","url5 <- ""https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/class_attributes.txt"""
+"0",""
+"0","attributes_example2 <- read.table(file = url5, header = T)"
+"0","head(attributes_example2)"

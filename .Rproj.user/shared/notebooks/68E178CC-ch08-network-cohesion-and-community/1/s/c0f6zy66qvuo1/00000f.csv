@@ -1,0 +1,3 @@
+"0","subnet <- subcommunity_dat$subgraph"
+"0","mems_subnet <- subcommunity_dat$mems_subgraph"
+"0","mems_updated <- subcommunity_dat$membership_updated"

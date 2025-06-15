@@ -1,0 +1,4 @@
+"0","url4 <- ""https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/example_vertex_spells.csv"""
+"0",""
+"0","vertex_spells <- read.csv(file = url4)"
+"0","head(vertex_spells)"

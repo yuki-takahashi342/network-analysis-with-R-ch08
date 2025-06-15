@@ -1,0 +1,5 @@
+"0","layout_email <- layout.fruchterman.reingold(subnet)"
+"0","plot(subnet, vertex.label = NA, vertex.size = .6,"
+"0","     layout = layout_email, edge.color = ""light gray"","
+"0","     edge.curved = .2, vertex.frame.color = NA,"
+"0","     vertex.color = mems_subnet)"

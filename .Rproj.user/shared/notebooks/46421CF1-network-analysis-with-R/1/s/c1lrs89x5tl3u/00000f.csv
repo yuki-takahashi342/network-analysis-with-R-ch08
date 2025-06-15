@@ -1,0 +1,4 @@
+"0","par(mfrow = c(1, 2))"
+"0",""
+"0","plot(extract_nets[[1]], main = ""Talk to Network, 0 to 20 Minutes"", "
+"0","     vertex.col = cols_example2, vertex.cex = 2)"

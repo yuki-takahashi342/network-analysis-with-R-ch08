@@ -1,0 +1,3 @@
+"0","set.seed(100)"
+"0","friend_comm_multi <- cluster_louvain(graph = net182_friend_und, "
+"0","                                     resolution = 0.8)"

@@ -1,0 +1,2 @@
+"0","email_network <- graph_from_data_frame(d = email_edges, directed = T,"
+"0","                                       vertices = (id = as.numeric(1:265214)))"

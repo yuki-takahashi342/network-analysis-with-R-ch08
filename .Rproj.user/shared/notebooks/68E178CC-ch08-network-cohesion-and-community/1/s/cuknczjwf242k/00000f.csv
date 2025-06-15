@@ -1,0 +1,3 @@
+"0","class182_dyads <- class182_networkdata[, c(""ego"", ""alter"")]"
+"0",""
+"0","head(class182_dyads)"

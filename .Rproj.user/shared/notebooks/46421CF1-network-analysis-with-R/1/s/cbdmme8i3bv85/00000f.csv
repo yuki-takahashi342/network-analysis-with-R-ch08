@@ -1,0 +1,8 @@
+"0","edgelist_relabel_function <- function(edgelist, ids){"
+"0","  "
+"0","  edgelist_simple <- data.frame(sender = as.numeric(factor(edgelist[, 1], "
+"0","                                                             levels = ids)), "
+"0","                                receiver = as.numeric(factor(edgelist[, 2], "
+"0","                                                             levels = ids))) "
+"0","  return(edgelist_simple)  "
+"0","}"
