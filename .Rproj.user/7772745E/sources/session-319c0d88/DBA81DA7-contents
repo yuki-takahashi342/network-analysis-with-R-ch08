@@ -6,6 +6,9 @@ Rawlings, Craig M., Jeffrey A. Smith, James Moody, and Daniel A. McFarland 2023.
 
 の日本語による再現コードです。
 
+原著は下記よりアクセスできます。
+https://inarwhal.github.io/NetworkAnalysisR-book/
+
 筆者の担当箇所であった第８章部分のみ、Webページとして公開しています。
 
 その他の章の再現については、別のqmdファイルにあります。
